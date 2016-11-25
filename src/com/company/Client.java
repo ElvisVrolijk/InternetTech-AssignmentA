@@ -1,8 +1,11 @@
 package com.company;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Scanner;
 
 /**
  * Created by e_voe_000 on 11/18/2016.
@@ -15,12 +18,14 @@ public class Client {
         ObjectInputStream in = null;
         ObjectOutputStream out = null;
 
+        Scanner scanner = new Scanner(System.in);
+
         try {
             socket = new Socket("localhost", 1500);
             out = new ObjectOutputStream(socket.getOutputStream());
             in = new ObjectInputStream(socket.getInputStream());
         } catch (UnknownHostException e) {
-            System.out.println("Don't know about host: locahost");
+            System.out.println("Don't know about host: localhost");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -28,13 +33,21 @@ public class Client {
         if (socket != null && out != null && in != null) {
             try {
                 out.writeObject("hello");
+                while (true) {
 
-                String responseLine;
+                    String responseLine = (String) in.readObject();
 
-                while ((responseLine = (String) in.readObject()) != null) {
                     System.out.println("Server: " + responseLine);
-                }
 
+                    String message = scanner.nextLine();
+
+                    out.writeObject(message);
+
+                    if (responseLine.equals("Exit")) {
+                        break;
+                    }
+
+                }
                 out.close();
                 in.close();
                 socket.close();
