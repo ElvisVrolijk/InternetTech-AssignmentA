@@ -23,11 +23,11 @@ public class Client implements Runnable {
 
     private static boolean close = false;
 
-    private Scanner scanner = new Scanner(System.in);
+    private static Scanner scanner = new Scanner(System.in);
     ///////////////////////////////////////////////////////////////////////////
     // Properties
     ///////////////////////////////////////////////////////////////////////////
-    private String username;
+    private static String username;
 
 
     public static void main(String[] args) {
@@ -44,7 +44,9 @@ public class Client implements Runnable {
 
         //handle input
         try {
-            new Client().proccesMessage(socket, out);
+            Client client = new Client();
+            client.setUsername();
+            client.processMessage(socket, out);
 
             in.close();
             out.close();
@@ -57,14 +59,13 @@ public class Client implements Runnable {
 
     /**
      * Used for writing messages
+     *
      * @param socket Socket of the current client
-     * @param out Output stream
+     * @param out    Output stream
      * @throws IOException
      */
-    private void proccesMessage(Socket socket, ObjectOutputStream out)  throws IOException {
+    private void processMessage(Socket socket, ObjectOutputStream out) throws IOException {
         if (socket != null && out != null) {
-
-            setUsername(); // wait for username setting
 
             new Thread(new Client()).start();
             String text;
@@ -97,8 +98,10 @@ public class Client implements Runnable {
     /**
      * Used for setting the user's name
      */
-    private void setUsername() {
+    private void setUsername() throws IOException {
         System.out.print("Enter username: ");
         username = scanner.nextLine();
+        out.writeObject("username: " + username);
+        out.flush();
     }
 }
