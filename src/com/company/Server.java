@@ -1,94 +1,61 @@
 package com.company;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Scanner;
 
 
 /**
  * Created by e_voe_000 on 11/18/2016.
  */
-public class Server {
+public class Server implements Runnable{
 
-    public static int counter = 0;
-    private ServerSocket serverSocket;
+    public static int counter = 1;
+    Socket clientSocket;
     ///////////////////////////////////////////////////////////////////////////
     // Properties
     ///////////////////////////////////////////////////////////////////////////
-    final List<ClientThread> clients = new ArrayList<>();
+    static HashMap<Integer, Socket> clients = new HashMap<>();
 
-    public static void main(String[] args) {
-        try {
-            Server server = new Server();
-            server.run();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public Server(Socket clientSocket) {
+        this.clientSocket = clientSocket;
     }
 
-    public Server() {
-        try {
-            serverSocket = new ServerSocket(1500);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+    public static void main(String[] args) throws Exception {
+        ServerSocket serverSocket = new ServerSocket(1500);
 
-    public void run() throws IOException {
         while (true) {
-            Socket client = serverSocket.accept();
-            ClientThread ct = new ClientThread(client);
-            clients.add(ct);
+            Socket socket = serverSocket.accept();
 
-            ct.start();
+            Server server = new Server(socket);
+
+            new Thread(server).start();
+            clients.put(counter, socket);
+            counter++;
         }
     }
 
-    private class ClientThread extends Thread {
+    public void run() {
+        try {
+            PrintWriter out;
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            String line;
 
-        private ObjectInputStream in = null;
-        private ObjectOutputStream out = null;
+            while ((line = in.readLine()) != null) {
+                for(int i = 1; i <= clients.size(); i++) {
+                    Socket currentClient = clients.get(i);
 
-        private String line;
-
-        private int id;
-
-        public ClientThread(Socket socket) {
-
-            this.id = ++counter;
-
-            try {
-                out = new ObjectOutputStream(socket.getOutputStream());
-                in = new ObjectInputStream(socket.getInputStream());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-        }
-
-        public void run() {
-            try {
-                while (true) {
-                    line = ((String) in.readObject());
-                    System.out.println(line);
-
-                    for (ClientThread client : clients) {
-                        client.broadcastMessage(line);
-                    }
+                    out = new PrintWriter(currentClient.getOutputStream(), true);
+                    out.println(line);
+                    out.flush();
                 }
-            } catch (IOException | ClassNotFoundException e) {
-                e.printStackTrace();
             }
-        }
-
-        private void broadcastMessage(String line) throws IOException{
-            out.writeObject(line);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
-
-
 }
