@@ -10,17 +10,16 @@ import java.util.Scanner;
 
 
 /**
+ * Representation of the server.
  * Created by e_voe_000 on 11/18/2016.
  */
 public class Server implements Runnable{
-
-    public static int counter = 1;
-    Socket clientSocket;
     ///////////////////////////////////////////////////////////////////////////
     // Properties
     ///////////////////////////////////////////////////////////////////////////
+    public static int counter = 1;
+    Socket clientSocket;
     static HashMap<Integer, Socket> clients = new HashMap<>();
-
     public Server(Socket clientSocket) {
         this.clientSocket = clientSocket;
     }
@@ -39,21 +38,26 @@ public class Server implements Runnable{
         }
     }
 
+    /**
+     * Used for broadcast the coming messages.
+     */
     public void run() {
         try {
             PrintWriter out;
-            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            String line;
+            ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
+            Message message;
 
-            while ((line = in.readLine()) != null) {
-                for(int i = 1; i <= clients.size(); i++) {
+            while ((message = ((Message) in.readObject())) != null) {
+                for (int i = 1; i <= clients.size(); i++) {
                     Socket currentClient = clients.get(i);
 
                     out = new PrintWriter(currentClient.getOutputStream(), true);
-                    out.println(line);
+                    out.println(message.getSender() + ": " + message.getText());
                     out.flush();
                 }
             }
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
