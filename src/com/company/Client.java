@@ -17,7 +17,7 @@ public class Client implements Runnable {
     private static Socket socket = null;
 
     private static DataInputStream in = null;
-    private static ObjectOutputStream out = null;
+    private static OutputStream out = null;
 
     private static BufferedReader inputLine = null;
 
@@ -32,8 +32,8 @@ public class Client implements Runnable {
 
     public static void main(String[] args) {
         try {
-            socket = new Socket("localhost", 1500);
-            out = new ObjectOutputStream(socket.getOutputStream());
+            socket = new Socket("localhost", 1337);
+            out = socket.getOutputStream();
             in = new DataInputStream(socket.getInputStream());
             inputLine = new BufferedReader(new InputStreamReader(System.in));
         } catch (UnknownHostException e) {
@@ -45,11 +45,9 @@ public class Client implements Runnable {
         //handle input
         try {
             Client client = new Client();
-            client.setUsername();
+//            client.setUsername();
             client.processMessage(socket, out);
 
-            in.close();
-            out.close();
             socket.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -64,15 +62,19 @@ public class Client implements Runnable {
      * @param out    Output stream
      * @throws IOException
      */
-    private void processMessage(Socket socket, ObjectOutputStream out) throws IOException {
+    private void processMessage(Socket socket, OutputStream out) throws IOException {
         if (socket != null && out != null) {
+            PrintWriter writer = new PrintWriter(out);
 
-            new Thread(new Client()).start();
+            new Thread(this).start();
             String text;
             while (!close) {
                 text = inputLine.readLine();
-                out.writeObject(new Message(username, text));
-                out.flush();
+                if (text.equals("Exit")) {
+                    break;
+                }
+                writer.println(text);
+                writer.flush();
             }
         }
     }
@@ -90,18 +92,18 @@ public class Client implements Runnable {
                 System.out.println(responseLine);
             }
             close = true;
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ignored) {
+            System.out.println(username + " disconnected!");
         }
     }
 
     /**
      * Used for setting the user's name
      */
-    private void setUsername() throws IOException {
-        System.out.print("Enter username: ");
-        username = scanner.nextLine();
-        out.writeObject("username: " + username);
-        out.flush();
-    }
+//    private void setUsername() throws IOException {
+//        System.out.print("Enter username: ");
+//        username = scanner.nextLine();
+//        out.writeObject("username: " + username);
+//        out.flush();
+//    }
 }
