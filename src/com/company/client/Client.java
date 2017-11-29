@@ -14,25 +14,24 @@ public class Client implements Runnable {
     ///////////////////////////////////////////////////////////////////////////
     // Fields
     ///////////////////////////////////////////////////////////////////////////
+
     private static Socket socket = null;
-
     private static DataInputStream in = null;
+    private static BufferedReader on = new BufferedReader(new InputStreamReader(in));
     private static OutputStream out = null;
-
     private static BufferedReader inputLine = null;
-
     private static boolean close = false;
 
-    private static Scanner scanner = new Scanner(System.in);
-    ///////////////////////////////////////////////////////////////////////////
-    // Properties
-    ///////////////////////////////////////////////////////////////////////////
-    private static String username;
+    //Port number
+    private final static int PORT = 1337;
 
-
+    /**
+     * Main function.
+     * @param args Process environment variables/
+     */
     public static void main(String[] args) {
         try {
-            socket = new Socket("localhost", 1337);
+            socket = new Socket("localhost", PORT);
             out = socket.getOutputStream();
             in = new DataInputStream(socket.getInputStream());
             inputLine = new BufferedReader(new InputStreamReader(System.in));
@@ -45,7 +44,6 @@ public class Client implements Runnable {
         //handle input
         try {
             Client client = new Client();
-//            client.setUsername();
             client.processMessage(socket, out);
 
             socket.close();
@@ -54,6 +52,10 @@ public class Client implements Runnable {
         }
 
     }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Methods
+    ///////////////////////////////////////////////////////////////////////////
 
     /**
      * Used for writing messages
@@ -80,7 +82,8 @@ public class Client implements Runnable {
     }
 
     /**
-     * Used for read messages
+     *  Asynchronously listens server messages
+     *  @deprecated Use BufferedReader.readLine();
      */
     public void run() {
         String responseLine;
@@ -92,18 +95,8 @@ public class Client implements Runnable {
                 System.out.println(responseLine);
             }
             close = true;
-        } catch (IOException ignored) {
-            System.out.println(username + " disconnected!");
+        } catch (IOException e) {
+            // TODO: 11/22/17  implement
         }
     }
-
-    /**
-     * Used for setting the user's name
-     */
-//    private void setUsername() throws IOException {
-//        System.out.print("Enter username: ");
-//        username = scanner.nextLine();
-//        out.writeObject("username: " + username);
-//        out.flush();
-//    }
 }
