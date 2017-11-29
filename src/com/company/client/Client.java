@@ -1,9 +1,8 @@
-package com.company;
+package com.company.client;
 
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.Scanner;
 
 /**
  * Representation of the client.
