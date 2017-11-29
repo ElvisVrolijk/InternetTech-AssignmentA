@@ -3,12 +3,14 @@ package com.company.server;
 public class Message {
     public enum MessageType {
         HELO,
+        PM,
         BCST,
         QUIT,
         UNKOWN
     }
 
     private String line;
+    private String target = null;
 
     public Message(String line) {
         this.line = line;
@@ -52,7 +54,26 @@ public class Message {
             return "";
         }
 
+        // If message type is PM - set the target
+        if (getMessageType().equals(MessageType.PM)) {
+            target = line.split(" ")[1];
+        } else {
+            target = null;
+        }
+
         // Return the part after the message type (excluding whitespace).
-        return line.substring(getMessageType().name().length() + 1);
+
+        if (target != null) {
+            return line.substring(getMessageType().name().length() + 1 + target.length() + 1);
+        } else {
+            return line.substring(getMessageType().name().length() + 1);
+        }
+    }
+
+    /**
+     * @return Returns the target string.
+     */
+    public String getTarget() {
+        return target;
     }
 }

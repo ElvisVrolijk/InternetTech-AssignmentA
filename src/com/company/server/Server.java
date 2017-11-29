@@ -1,5 +1,7 @@
 package com.company.server;
 
+import com.company.client.Client;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -52,7 +54,7 @@ public class Server {
     }
 
     /**
-     * This thread sleeps for somewhere between 10 tot 20 seconds and then drops the
+     * This thread sleeps for somewhere between 10 to 20 seconds and then drops the
      * client thread. This is done to simulate a lost in connection.
      */
     private class DropClientThread implements Runnable {
@@ -150,6 +152,15 @@ public class Server {
                                         writeToClient("+OK " + getUsername());
                                     }
                                 }
+                                break;
+                            case PM:
+                                String messageBody = message.getPayload();
+                                for (ClientThread ct : threads) {
+                                    if (ct.getUsername().equals(message.getTarget()) && ct != this) {
+                                        ct.writeToClient("PM [" + getUsername() + "] " + messageBody);
+                                    }
+                                }
+                                writeToClient("+OK");
                                 break;
                             case BCST:
                                 // Broadcast to other clients.
