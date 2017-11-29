@@ -1,6 +1,6 @@
 package com.company.server;
 
-import com.company.client.Client;
+import com.company.server.group.Group;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -14,12 +14,14 @@ import static com.company.server.ServerState.*;
 public class Server {
 
     private ServerSocket serverSocket;
-    private Set<ClientThread> threads;
-    private ServerConfiguration conf;
+    private static Set<ClientThread> threads;
+    private static Set<Group> groups;
+    private static ServerConfiguration conf;
 
 
     public Server(ServerConfiguration conf) {
         this.conf = conf;
+        this.groups = new HashSet<Group>();
     }
 
     /**
@@ -82,7 +84,7 @@ public class Server {
      * This inner class is used to handle all communication between the server and a
      * specific client.
      */
-    private class ClientThread implements Runnable {
+    public static class ClientThread implements Runnable {
 
         private DataInputStream is;
         private OutputStream os;
@@ -154,10 +156,9 @@ public class Server {
                                 }
                                 break;
                             case PM:
-                                String messageBody = message.getPayload();
                                 for (ClientThread ct : threads) {
                                     if (ct.getUsername().equals(message.getTarget()) && ct != this) {
-                                        ct.writeToClient("PM [" + getUsername() + "] " + messageBody);
+                                        ct.writeToClient("PM [" + getUsername() + "] " + message.getPayload());
                                     }
                                 }
                                 writeToClient("+OK");
@@ -170,6 +171,43 @@ public class Server {
                                     }
                                 }
                                 writeToClient("+OK");
+                                break;
+                            case NEWGROUP:
+                                boolean alreadyExists = false;
+                                for (Group group : groups) {
+                                    if (group.getName().equals(message.getTarget())) {
+                                        alreadyExists = true;
+                                    }
+                                }
+                                if (!alreadyExists) {
+                                    groups.add(new Group(message.getTarget(), this));
+                                    writeToClient("+OK Group " + message.getTarget() + " was created");
+                                } else {
+                                    writeToClient("-ERR The group " + message.getTarget() + " already exists");
+                                }
+                                break;
+                            case JOIN:
+                                for (Group group : groups) {
+                                    if (group.getName().equals(message.getTarget())) {
+                                        // check if user is not a member (banned)
+                                        if (group.addMember(this)) {
+                                            writeToClient("+OK You are in the group");
+                                        } else {
+                                            // TODO: 11/29/17 separate those:
+                                            writeToClient("-ERR You are in this group already or banned");
+                                        }
+                                    }
+                                }
+                                break;
+                            case GROUP:
+                                for (Group group : groups) {
+                                    if (group.getName().equals(message.getTarget())
+                                            && group.isMember(this)) {
+                                        for (ClientThread member : group.getMembersExcept(this)) {
+                                            member.writeToClient("GROUP (" + message.getTarget() +") [" + getUsername() +"] " + message.getPayload());
+                                        }
+                                    }
+                                }
                                 break;
                             case QUIT:
                                 // Close connection

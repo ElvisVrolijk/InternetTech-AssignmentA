@@ -5,6 +5,9 @@ public class Message {
         HELO,
         PM,
         BCST,
+        NEWGROUP,
+        JOIN,
+        GROUP,
         QUIT,
         UNKOWN
     }
@@ -40,7 +43,7 @@ public class Message {
      * @return  Returns the raw line minus the message type. If the message type is
      *          unkown then raw line is returned.
      */
-    public String getPayload() {
+    public String getPayload() { // TODO: 11/29/17 Change to switch
 
         // Return the raw line if we don't know what the message type is.
         if (getMessageType().equals(MessageType.UNKOWN)) {
@@ -52,13 +55,6 @@ public class Message {
         // should prevent index out of bounds in the substring).
         if (line == null || line.length() < getMessageType().name().length() + 1) {
             return "";
-        }
-
-        // If message type is PM - set the target
-        if (getMessageType().equals(MessageType.PM)) {
-            target = line.split(" ")[1];
-        } else {
-            target = null;
         }
 
         // Return the part after the message type (excluding whitespace).
@@ -74,6 +70,15 @@ public class Message {
      * @return Returns the target string.
      */
     public String getTarget() {
-        return target;
+        if (getMessageType().equals(MessageType.PM)
+                || getMessageType().equals(MessageType.JOIN)
+                || getMessageType().equals(MessageType.NEWGROUP)
+                || getMessageType().equals(MessageType.GROUP)) {
+
+            this.target = line.split(" ")[1];
+            return this.target;
+        } else {
+            return null;
+        }
     }
 }
