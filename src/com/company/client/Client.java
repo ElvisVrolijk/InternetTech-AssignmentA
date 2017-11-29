@@ -16,7 +16,6 @@ public class Client implements Runnable {
 
     private static Socket socket = null;
     private static DataInputStream in = null;
-    private static BufferedReader on = new BufferedReader(new InputStreamReader(in));
     private static OutputStream out = null;
     private static BufferedReader inputLine = null;
     private static boolean close = false;
