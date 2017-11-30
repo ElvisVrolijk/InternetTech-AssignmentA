@@ -41,7 +41,7 @@ public class Group {
     }
 
     public boolean addMember(ClientThread user) {
-        if (!isBanned(user)) {
+        if (!isBanned(user) && !members.contains(user)) {
             members.add(user);
             return true;
         }

@@ -55,6 +55,11 @@ public class Server {
         }
     }
 
+    public String helpMessage() {
+        // TODO: 11/30/17 create HELP request to see all the commands.
+        return "";
+    }
+
     /**
      * This thread sleeps for somewhere between 10 to 20 seconds and then drops the
      * client thread. This is done to simulate a lost in connection.
@@ -191,7 +196,7 @@ public class Server {
                                     if (group.getName().equals(message.getTarget())) {
                                         // check if user is not a member (banned)
                                         if (group.addMember(this)) {
-                                            writeToClient("+OK You are in the group");
+                                            writeToClient("+OK You joined the group");
                                         } else {
                                             // TODO: 11/29/17 separate those:
                                             writeToClient("-ERR You are in this group already or banned");
@@ -229,6 +234,7 @@ public class Server {
                                                 if (group.isAdmin(this)) {
                                                     group.removeMember(user);
                                                     writeToClient("+OK User was kicked");
+                                                    user.writeToClient("INFO You are kicked from " + message.getTarget());
                                                 } else {
                                                     writeToClient("-Err You are not the admin of this group");
                                                 }
@@ -236,6 +242,20 @@ public class Server {
                                         }
                                     }
 
+                                }
+                                break;
+                            case BAN:
+                                for (Group group : groups) {
+                                    if (group.getName().equals(message.getTarget())
+                                            && group.isAdmin(this)) {
+                                        for (ClientThread user : group.getMembers()) {
+                                            if (user.getUsername().equals(message.getPayload())) {
+                                                group.banMember(user);
+                                                writeToClient("+OK user was banned");
+                                                user.writeToClient("INFO You are banned in " + message.getTarget());
+                                            }
+                                        }
+                                    }
                                 }
                                 break;
                             case QUIT:

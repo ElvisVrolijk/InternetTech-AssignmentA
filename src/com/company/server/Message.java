@@ -3,6 +3,10 @@ package com.company.server;
 public class Message {
     public enum MessageType {
         HELO,
+        UL,
+        GL,
+        MGL,
+        ADMIN,
         PM,
         BCST,
         NEWGROUP,
@@ -10,6 +14,9 @@ public class Message {
         LEAVE,
         GROUP,
         KICK,
+        BAN,
+        UNBAN,
+        HELP,
         QUIT,
         UNKOWN
     }
@@ -81,7 +88,8 @@ public class Message {
                 || getMessageType().equals(MessageType.NEWGROUP)
                 || getMessageType().equals(MessageType.GROUP)
                 || getMessageType().equals(MessageType.KICK)
-                || getMessageType().equals(MessageType.LEAVE)) {
+                || getMessageType().equals(MessageType.LEAVE)
+                || getMessageType().equals(MessageType.BAN)) {
 
             this.target = line.split(" ")[1];
             return this.target;
