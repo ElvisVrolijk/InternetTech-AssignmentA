@@ -199,24 +199,54 @@ public class Server {
                                     }
                                 }
                                 break;
+                            case LEAVE:
+                                for (Group group : groups) {
+                                    if (group.getName().equals(message.getTarget())) {
+                                        if (group.isMember(this)) {
+                                            group.removeMember(this);
+                                            writeToClient("+OK You leave the group");
+                                        }
+                                    }
+                                }
+                                break;
                             case GROUP:
                                 for (Group group : groups) {
                                     if (group.getName().equals(message.getTarget())
-                                            && group.isMember(this)) {
+                                            && group.isMember(this)
+                                            && !group.isBanned(this)) {
                                         for (ClientThread member : group.getMembersExcept(this)) {
                                             member.writeToClient("GROUP (" + message.getTarget() +") [" + getUsername() +"] " + message.getPayload());
                                         }
                                     }
                                 }
                                 break;
+                            case KICK:
+                                for (Group group : groups) {
+                                    if (group.getName().equals(message.getTarget())) {
+                                        for (ClientThread user : threads) {
+                                            if (group.isMember(user)
+                                                    && user.getUsername().equals(message.getPayload())) {
+                                                if (group.isAdmin(this)) {
+                                                    group.removeMember(user);
+                                                    writeToClient("+OK User was kicked");
+                                                } else {
+                                                    writeToClient("-Err You are not the admin of this group");
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                }
+                                break;
                             case QUIT:
+                                // FIXME: 11/29/17 doesnt disconnect the user
                                 // Close connection
                                 state = FINISHED;
                                 writeToClient("+OK Goodbye");
                                 break;
                             case UNKOWN:
                                 // Unkown command has been sent
-                                writeToClient("-ERR Unkown command");
+                                writeToClient("-ERR Unknown command");
                                 break;
                         }
                     }

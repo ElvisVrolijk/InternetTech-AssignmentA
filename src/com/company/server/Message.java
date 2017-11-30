@@ -7,7 +7,9 @@ public class Message {
         BCST,
         NEWGROUP,
         JOIN,
+        LEAVE,
         GROUP,
+        KICK,
         QUIT,
         UNKOWN
     }
@@ -50,6 +52,10 @@ public class Message {
             return line;
         }
 
+        if (getMessageType().equals(MessageType.KICK)) {
+            return line.substring(getMessageType().name().length() + 1 + target.length() + 1);
+        }
+
         // Return an empty string if the raw line was null or
         // the length of the line is smaller than the message type plus one (this
         // should prevent index out of bounds in the substring).
@@ -73,7 +79,9 @@ public class Message {
         if (getMessageType().equals(MessageType.PM)
                 || getMessageType().equals(MessageType.JOIN)
                 || getMessageType().equals(MessageType.NEWGROUP)
-                || getMessageType().equals(MessageType.GROUP)) {
+                || getMessageType().equals(MessageType.GROUP)
+                || getMessageType().equals(MessageType.KICK)
+                || getMessageType().equals(MessageType.LEAVE)) {
 
             this.target = line.split(" ")[1];
             return this.target;

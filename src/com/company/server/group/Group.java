@@ -36,6 +36,10 @@ public class Group {
     // Methods
     ///////////////////////////////////////////////////////////////////////////
 
+    public boolean isAdmin(ClientThread user) {
+        return admin.equals(user);
+    }
+
     public boolean addMember(ClientThread user) {
         if (!isBanned(user)) {
             members.add(user);
