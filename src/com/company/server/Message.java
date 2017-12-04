@@ -5,11 +5,12 @@ public class Message {
         HELO,
         UL,
         GL,
+        GLU,
         MGL,
         ADMIN,
         PM,
         BCST,
-        NEWGROUP,
+        CG,
         JOIN,
         LEAVE,
         GROUP,
@@ -83,13 +84,16 @@ public class Message {
      * @return Returns the target string.
      */
     public String getTarget() {
+        //TODO : what happens if there is no target
+
         if (getMessageType().equals(MessageType.PM)
                 || getMessageType().equals(MessageType.JOIN)
-                || getMessageType().equals(MessageType.NEWGROUP)
+                || getMessageType().equals(MessageType.CG)
                 || getMessageType().equals(MessageType.GROUP)
                 || getMessageType().equals(MessageType.KICK)
                 || getMessageType().equals(MessageType.LEAVE)
-                || getMessageType().equals(MessageType.BAN)) {
+                || getMessageType().equals(MessageType.BAN)
+                || getMessageType().equals(MessageType.GLU)) {
 
             this.target = line.split(" ")[1];
             return this.target;

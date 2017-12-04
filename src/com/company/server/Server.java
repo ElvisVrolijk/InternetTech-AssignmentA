@@ -45,7 +45,7 @@ public class Server {
                 System.out.println("Num clients: " + threads.size());
 
                 // Simulate lost connections if configured.
-                if(conf.doSimulateConnectionLost()){
+                if (conf.doSimulateConnectionLost()) {
                     DropClientThread dct = new DropClientThread(ct);
                     new Thread(dct).start();
                 }
@@ -67,7 +67,7 @@ public class Server {
     private class DropClientThread implements Runnable {
         ClientThread ct;
 
-        DropClientThread(ClientThread ct){
+        DropClientThread(ClientThread ct) {
             this.ct = ct;
         }
 
@@ -138,7 +138,7 @@ public class Server {
                             case HELO:
                                 // Check username format.
                                 boolean isValidUsername = message.getPayload().matches("[a-zA-Z0-9_]{3,14}");
-                                if(!isValidUsername) {
+                                if (!isValidUsername) {
                                     state = FINISHED;
                                     writeToClient("-ERR username has an invalid format (only characters, numbers and underscores are allowed)");
                                 } else {
@@ -160,6 +160,47 @@ public class Server {
                                     }
                                 }
                                 break;
+                            case UL:
+                                for (ClientThread ct : threads) {
+                                    if (ct.getUsername() != null) {
+                                        writeToClient("[" + ct.getUsername() + "]");
+                                    }
+                                }
+                                writeToClient("+OK");
+                                break;
+                            case GL:
+                                for (Group group : groups) {
+                                    writeToClient("[" + group.getName() + "]");
+                                }
+                                writeToClient("+OK");
+                                break;
+                            case GLU:
+                                boolean exists = false;
+                                boolean inGroup = false;
+
+                                for (ClientThread ct : threads) {
+                                    if (ct.getUsername() != null) {
+                                        if (ct.getUsername().equals(message.getTarget())) {
+                                            exists = true;
+                                            for (Group group : groups) {
+                                                if (group.isMember(ct)) {
+                                                    inGroup = true;
+                                                    writeToClient("[" + group.getName() + "]");
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                if (exists) {
+                                    if (!inGroup) {
+                                        writeToClient("-ERR user is not in any group!");
+                                    }
+                                } else  {
+                                    writeToClient("-ERR user does not exists!");
+                                }
+
+                                writeToClient("+OK");
+                                break;
                             case PM:
                                 for (ClientThread ct : threads) {
                                     if (ct.getUsername().equals(message.getTarget()) && ct != this) {
@@ -177,7 +218,7 @@ public class Server {
                                 }
                                 writeToClient("+OK");
                                 break;
-                            case NEWGROUP:
+                            case CG:
                                 boolean alreadyExists = false;
                                 for (Group group : groups) {
                                     if (group.getName().equals(message.getTarget())) {
@@ -186,23 +227,30 @@ public class Server {
                                 }
                                 if (!alreadyExists) {
                                     groups.add(new Group(message.getTarget(), this));
-                                    writeToClient("+OK Group " + message.getTarget() + " was created");
+                                    writeToClient("+OK Group [" + message.getTarget() + "] was created");
                                 } else {
-                                    writeToClient("-ERR The group " + message.getTarget() + " already exists");
+                                    writeToClient("-ERR The group [" + message.getTarget() + "] already exists");
                                 }
+                                writeToClient("+OK");
                                 break;
                             case JOIN:
                                 for (Group group : groups) {
                                     if (group.getName().equals(message.getTarget())) {
                                         // check if user is not a member (banned)
                                         if (group.addMember(this)) {
-                                            writeToClient("+OK You joined the group");
+                                            writeToClient("+OK You joined the group!");
                                         } else {
-                                            // TODO: 11/29/17 separate those:
-                                            writeToClient("-ERR You are in this group already or banned");
+                                            if (group.isBanned(this)) {
+                                                writeToClient("-ERR you are banned!");
+                                            } else if (group.isMember(this)) {
+                                                writeToClient("-ERR you are already in this group!");
+                                            }
+//                                             DONE: 11/29/17 separate those:
+//                                            writeToClient("-ERR You are in this group already or banned!");
                                         }
                                     }
                                 }
+                                writeToClient("+OK");
                                 break;
                             case LEAVE:
                                 for (Group group : groups) {
@@ -220,7 +268,7 @@ public class Server {
                                             && group.isMember(this)
                                             && !group.isBanned(this)) {
                                         for (ClientThread member : group.getMembersExcept(this)) {
-                                            member.writeToClient("GROUP (" + message.getTarget() +") [" + getUsername() +"] " + message.getPayload());
+                                            member.writeToClient("GROUP (" + message.getTarget() + ") [" + getUsername() + "] " + message.getPayload());
                                         }
                                     }
                                 }
@@ -259,10 +307,11 @@ public class Server {
                                 }
                                 break;
                             case QUIT:
-                                // FIXME: 11/29/17 doesnt disconnect the user
+                                // FIXED: 11/29/17 doesnt disconnect the user
                                 // Close connection
                                 state = FINISHED;
                                 writeToClient("+OK Goodbye");
+                                threads.remove(this);
                                 break;
                             case UNKOWN:
                                 // Unkown command has been sent
@@ -285,7 +334,8 @@ public class Server {
 
         /**
          * Write a message to this client thread.
-         * @param message   The message to be sent to the (connected) client.
+         *
+         * @param message The message to be sent to the (connected) client.
          */
         private void writeToClient(String message) {
             boolean shouldDropPacket = false;
@@ -314,7 +364,7 @@ public class Server {
 
             // Do the actual message sending here.
             if (!shouldDropPacket) {
-                if (shouldCorruptPacket){
+                if (shouldCorruptPacket) {
                     message = corrupt(message);
                     System.out.println("[CORRUPT] " + message);
                 }
@@ -331,13 +381,14 @@ public class Server {
         /**
          * This methods implements a (naive) simulation of a corrupt message by replacing
          * some charaters at random indexes with the charater X.
-         * @param message   The message to be corrupted.
-         * @return  Returns the message with some charaters replaced with X's.
+         *
+         * @param message The message to be corrupted.
+         * @return Returns the message with some charaters replaced with X's.
          */
         private String corrupt(String message) {
             Random random = new Random();
             int x = random.nextInt(4);
-            char[] messageChars =  message.toCharArray();
+            char[] messageChars = message.toCharArray();
 
             while (x < messageChars.length) {
                 messageChars[x] = 'X';
@@ -349,9 +400,10 @@ public class Server {
 
         /**
          * Util method to print (debug) information about the server's incoming and outgoing messages.
-         * @param isIncoming    Indicates whether the message was an incoming message. If false then
-         *                      an outgoing message is assumed.
-         * @param message       The message received or sent.
+         *
+         * @param isIncoming Indicates whether the message was an incoming message. If false then
+         *                   an outgoing message is assumed.
+         * @param message    The message received or sent.
          */
         private void logMessage(boolean isIncoming, String message) {
             String directionString = conf.CLI_COLOR_OUTGOING + ">> ";  // Outgoing message.
