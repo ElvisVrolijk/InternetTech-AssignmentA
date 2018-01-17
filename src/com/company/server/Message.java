@@ -97,7 +97,9 @@ public class Message {
                 || getMessageType().equals(MessageType.LEAVE)
                 || getMessageType().equals(MessageType.BAN)
                 || getMessageType().equals(MessageType.GLU)
-                || getMessageType().equals(MessageType.FILE)) {
+                || getMessageType().equals(MessageType.FILE)
+                || getMessageType().equals(MessageType.ACCEPT)
+                || getMessageType().equals(MessageType.REJECT)) {
 
             this.target = line.split(" ")[1];
             return this.target;

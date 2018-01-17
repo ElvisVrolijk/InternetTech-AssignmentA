@@ -314,15 +314,25 @@ public class Server {
                                 }
                                 break;
                             case FILE:
-                                fileSocket = new FileTransfer(new Socket(), this.socket, null);
+                                fileSocket = new FileTransfer(new Socket(), this, null);
                                 for (ClientThread ct : threads) {
                                     if (ct.getUsername().equals(message.getTarget()) && ct != this) {
                                         ct.writeToClient("FILE [" + getUsername() + "]: run command ACCEPT to start loading or REJECT to cancel");
-                                        fileSocket.setReceiver(ct.socket);
+                                        fileSocket.setReceiver(ct);
                                     }
                                 }
                                 break;
                             case ACCEPT:
+                                for (FileTransfer ft : fileTransfers) {
+                                    if (ft.getReceiver().getUsername().equals(this.getUsername())) {
+                                        //this file is for you
+                                        if (message.getTarget().equals(ft.getSender().getUsername())) {
+                                            //this file is from the right person
+                                            // TODO: 1/17/18 start the connection because u accepted it
+                                            
+                                        }
+                                    }
+                                }
                                 break;
                             case REJECT:
                                 break;

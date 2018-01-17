@@ -8,13 +8,13 @@ import java.net.Socket;
  */
 public class FileTransfer implements Runnable {
 
-    private Socket sender;
-    private Socket receiver;
+    private Server.ClientThread sender;
+    private Server.ClientThread receiver;
     private Socket socket;
     private InputStream in;
     private OutputStream out;
 
-    public FileTransfer(Socket socket, Socket sender, Socket receiver) {
+    public FileTransfer(Socket socket, Server.ClientThread sender, Server.ClientThread receiver) {
         this.socket = socket;
         this.sender = sender;
         this.receiver = receiver;
@@ -32,7 +32,27 @@ public class FileTransfer implements Runnable {
 
     }
 
-    public void setReceiver(Socket receiver) {
+    public Server.ClientThread getSender() {
+        return sender;
+    }
+
+    public Server.ClientThread getReceiver() {
+        return receiver;
+    }
+
+    public Socket getSocket() {
+        return socket;
+    }
+
+    public InputStream getIn() {
+        return in;
+    }
+
+    public OutputStream getOut() {
+        return out;
+    }
+
+    public void setReceiver(Server.ClientThread receiver) {
         this.receiver = receiver;
     }
 }
