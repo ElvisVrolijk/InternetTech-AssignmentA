@@ -31,12 +31,13 @@ public class Message {
 
     /**
      * Parses the first word in the message in an attempt to get the message type.
-     * @return  Return a message type if it can be parsed correctly or UKNOWN if
-     *          the message type cannot be derived.
+     *
+     * @return Return a message type if it can be parsed correctly or UKNOWN if
+     * the message type cannot be derived.
      */
     public MessageType getMessageType() {
         MessageType result = MessageType.UNKOWN;
-        try{
+        try {
             if (line != null && line.length() > 0) {
                 String[] splits = line.split("\\s+");
                 result = MessageType.valueOf(splits[0]);
@@ -44,14 +45,15 @@ public class Message {
         } catch (IllegalArgumentException iaex) {
             System.out.println("[ERROR] Unknown command");
         }
-        return  result;
+        return result;
     }
 
     /**
      * Gets the payload of the message. This is interpreted as the raw message line
      * without the message type.
-     * @return  Returns the raw line minus the message type. If the message type is
-     *          unkown then raw line is returned.
+     *
+     * @return Returns the raw line minus the message type. If the message type is
+     * unkown then raw line is returned.
      */
     public String getPayload() { // TODO: 11/29/17 Change to switch
 
@@ -95,6 +97,9 @@ public class Message {
                 || getMessageType().equals(MessageType.BAN)
                 || getMessageType().equals(MessageType.GLU)) {
 
+            if (line.length() < getMessageType().name().length() + 1) {
+                return "";
+            }
             this.target = line.split(" ")[1];
             return this.target;
         } else {
