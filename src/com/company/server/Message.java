@@ -17,6 +17,9 @@ public class Message {
         KICK,
         BAN,
         UNBAN,
+        FILE,
+        ACCEPT,
+        REJECT,
         HELP,
         QUIT,
         UNKOWN
@@ -95,7 +98,10 @@ public class Message {
                 || getMessageType().equals(MessageType.KICK)
                 || getMessageType().equals(MessageType.LEAVE)
                 || getMessageType().equals(MessageType.BAN)
-                || getMessageType().equals(MessageType.GLU)) {
+                || getMessageType().equals(MessageType.GLU)
+                || getMessageType().equals(MessageType.FILE)
+                || getMessageType().equals(MessageType.ACCEPT)
+                || getMessageType().equals(MessageType.REJECT)) {
 
             if (line.length() < getMessageType().name().length() + 1) {
                 return "";

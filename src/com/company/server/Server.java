@@ -11,17 +11,23 @@ import java.util.Set;
 
 import static com.company.server.ServerState.*;
 
+// TODO: 1/17/18 remove user if it is disconnected
+// TODO: 1/17/18 file transportation
+// TODO: 1/17/18 encryption
+// TODO: 1/17/18 message validation
 public class Server {
 
     private ServerSocket serverSocket;
     private static Set<ClientThread> threads;
     private static Set<Group> groups;
+    private static Set<FileTransfer> fileTransfers;
     private static ServerConfiguration conf;
 
 
     public Server(ServerConfiguration conf) {
         this.conf = conf;
         this.groups = new HashSet<Group>();
+        this.fileTransfers = new HashSet<>();
     }
 
     /**
@@ -96,6 +102,7 @@ public class Server {
         private Socket socket;
         private ServerState state;
         private String username;
+        private FileTransfer fileSocket;
 
         public ClientThread(Socket socket) {
             this.state = INIT;
@@ -141,7 +148,7 @@ public class Server {
                                 // Check username format.
                                 boolean isValidUsername = message.getPayload().matches("[a-zA-Z0-9_]{3,14}");
                                 if (!isValidUsername) {
-                                    state = FINISHED;
+//                                    state = FINISHED;
                                     writeToClient("-ERR username has an invalid format (only characters, numbers and underscores are allowed)");
                                 } else {
                                     // Check if user already exists.
@@ -153,7 +160,7 @@ public class Server {
                                         }
                                     }
                                     if (userExists) {
-                                        state = FINISHED;
+//                                        state = FINISHED;
                                         writeToClient("-ERR user already logged in");
                                     } else {
                                         state = CONNECTED;
@@ -423,8 +430,31 @@ public class Server {
                                         "        HELP,(Example HELP) used to get info for the key words!\n" +
                                         "        QUIT, (Example QUIT) used to leave the server");
                                 break;
+                            case FILE:
+                                fileSocket = new FileTransfer(new Socket(), this, null);
+                                for (ClientThread ct : threads) {
+                                    if (ct.getUsername().equals(message.getTarget()) && ct != this) {
+                                        ct.writeToClient("FILE [" + getUsername() + "]: run command ACCEPT to start loading or REJECT to cancel");
+                                        fileSocket.setReceiver(ct);
+                                    }
+                                }
+                                break;
+                            case ACCEPT:
+                                for (FileTransfer ft : fileTransfers) {
+                                    if (ft.getReceiver().getUsername().equals(this.getUsername())) {
+                                        //this file is for you
+                                        if (message.getTarget().equals(ft.getSender().getUsername())) {
+                                            //this file is from the right person
+                                            // TODO: 1/17/18 start the connection because u accepted it
+                                            
+                                        }
+                                    }
+                                }
+                                break;
+                            case REJECT:
+                                break;
                             case QUIT:
-                                // FIXED: 11/29/17 doesnt disconnect the user
+                                // FIXME: 11/29/17 doesnt disconnect the user
                                 // Close connection
                                 state = FINISHED;
                                 writeToClient("+OK Goodbye");
@@ -439,11 +469,12 @@ public class Server {
                 }
             } catch (IOException e) {
                 e.printStackTrace();
+                threads.remove(this);
             }
         }
 
         /**
-         * An external process can stop the client using this methode.
+         * An external process can stop the client using this method.
          */
         public void kill() {
             state = FINISHED;
