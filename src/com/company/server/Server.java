@@ -30,6 +30,16 @@ public class Server {
         this.fileTransfers = new HashSet<>();
     }
 
+
+    public ClientThread findClientByUsername(String username) {
+        for (ClientThread ct : threads) {
+            if (ct.getUsername().equals(username)) {
+                return ct;
+            }
+        }
+        return null;
+    }
+
     /**
      * Runs the server. The server listens for incoming client connections
      * by opening a socket on a specific port.
@@ -103,6 +113,10 @@ public class Server {
         private ServerState state;
         private String username;
         private FileTransfer fileSocket;
+
+        public void setFileSocket(FileTransfer fileSocket) {
+            this.fileSocket = fileSocket;
+        }
 
         public ClientThread(Socket socket) {
             this.state = INIT;
@@ -445,8 +459,12 @@ public class Server {
                                         //this file is for you
                                         if (message.getTarget().equals(ft.getSender().getUsername())) {
                                             //this file is from the right person
-                                            // TODO: 1/17/18 start the connection because u accepted it
-                                            
+                                            for (ClientThread ct : threads) {
+                                                if (ct.getUsername().equals(message.getTarget()) && ct != this) {
+                                                    ct.writeToClient("FILE [" + ct.getUsername() + "]: accepted");
+                                                    fileSocket.setReceiver(ct);
+                                                }
+                                            }
                                         }
                                     }
                                 }
