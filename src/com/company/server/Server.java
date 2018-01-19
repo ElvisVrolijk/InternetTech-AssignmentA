@@ -5,9 +5,7 @@ import com.company.server.group.Group;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashSet;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 import static com.company.server.ServerState.*;
 
@@ -20,14 +18,16 @@ public class Server {
     private ServerSocket serverSocket;
     private static Set<ClientThread> threads;
     private static Set<Group> groups;
+    private static Map<String, String> publicKeys;
     private static Set<FileTransfer> fileTransfers;
     private static ServerConfiguration conf;
 
 
     public Server(ServerConfiguration conf) {
         this.conf = conf;
-        this.groups = new HashSet<Group>();
+        this.groups = new HashSet<>();
         this.fileTransfers = new HashSet<>();
+        this.publicKeys = new HashMap<>();
     }
 
     /**
@@ -146,27 +146,43 @@ public class Server {
                         switch (message.getMessageType()) {
                             case HELO:
                                 // Check username format.
-                                boolean isValidUsername = message.getPayload().matches("[a-zA-Z0-9_]{3,14}");
-                                if (!isValidUsername) {
+                                if (!isEmptyTarget) {
+                                    boolean isValidUsername = message.getTarget().matches("[a-zA-Z0-9_]{3,14}");
+                                    if (!isValidUsername) {
 //                                    state = FINISHED;
-                                    writeToClient("-ERR username has an invalid format (only characters, numbers and underscores are allowed)");
-                                } else {
-                                    // Check if user already exists.
-                                    boolean userExists = false;
-                                    for (ClientThread ct : threads) {
-                                        if (ct != this && message.getPayload().equals(ct.getUsername())) {
-                                            userExists = true;
-                                            break;
+                                        writeToClient("-ERR username has an invalid format (only characters, numbers and underscores are allowed)");
+                                    } else {
+                                        // Check if user already exists.
+                                        boolean userExists = false;
+                                        for (ClientThread ct : threads) {
+                                            if (ct != this && message.getTarget().equals(ct.getUsername())) {
+                                                userExists = true;
+                                                break;
+                                            }
+                                        }
+                                        if (userExists) {
+//                                        state = FINISHED;
+                                            writeToClient("-ERR user already logged in");
+                                        } else {
+                                            state = CONNECTED;
+                                            this.username = message.getTarget();
+                                            publicKeys.put(getUsername(), message.getPayload());
+                                            writeToClient("+OK " + getUsername());
+                                            for (ClientThread ct : threads) {
+                                                if (ct != this) {
+                                                    ct.writeToClient("PK " + getUsername() + " " + message.getPayload());
+                                                }
+                                            }
+
+                                             for (Map.Entry<String, String> entry : publicKeys.entrySet()) {
+                                                if (!Objects.equals(entry.getKey(), getUsername())) {
+                                                    writeToClient("PK " + entry.getKey() + " " + entry.getValue());
+                                                }
+                                            }
                                         }
                                     }
-                                    if (userExists) {
-//                                        state = FINISHED;
-                                        writeToClient("-ERR user already logged in");
-                                    } else {
-                                        state = CONNECTED;
-                                        this.username = message.getPayload();
-                                        writeToClient("+OK " + getUsername());
-                                    }
+                                } else {
+                                    writeToClient("-ERR username has an invalid format (only characters, numbers and underscores are allowed)");
                                 }
                                 break;
                             case UL:

@@ -92,6 +92,7 @@ public class Message {
         //TODO : what happens if there is no target
 
         if (getMessageType().equals(MessageType.PM)
+                || getMessageType().equals(MessageType.HELO)
                 || getMessageType().equals(MessageType.JOIN)
                 || getMessageType().equals(MessageType.CG)
                 || getMessageType().equals(MessageType.GROUP)
@@ -103,7 +104,7 @@ public class Message {
                 || getMessageType().equals(MessageType.ACCEPT)
                 || getMessageType().equals(MessageType.REJECT)) {
 
-            if (line.length() < getMessageType().name().length() + 1) {
+            if (line == null || line.length() < getMessageType().name().length() + 1) {
                 return "";
             }
             this.target = line.split(" ")[1];
