@@ -1,16 +1,12 @@
 package com.company.client;
 
-import sun.nio.cs.ext.MS874;
-
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Arrays;
-import java.util.Map;
 
 /**
  * Representation of the client.
- *
  */
 public class Client implements Runnable {
 
@@ -76,9 +72,6 @@ public class Client implements Runnable {
             String text;
             while (!close) {
                 text = inputLine.readLine();
-                if (text.equals("Exit")) {
-                    break;
-                }
 
                 writer.println(sendMessage(text));
                 writer.flush();
@@ -95,12 +88,13 @@ public class Client implements Runnable {
         String responseLine;
         try {
             while ((responseLine = in.readLine()) != null) {
-                if (responseLine.equals("+OK Goodbye")) {
-                    break;
-                }
                 processResponse(responseLine);
+
+                if (responseLine.equals("+OK Goodbye")) {
+                    close = true;
+                }
             }
-            close = true;
+
         } catch (IOException e) {
             // TODO: 11/22/17  implement
         }
@@ -146,7 +140,7 @@ public class Client implements Runnable {
                             }
                             tempArray[2] = encryption.getPublicKey();
                             split = tempArray;
-                        } else if (split.length == 2){
+                        } else if (split.length == 2) {
                             String[] tempArray = new String[3];
                             for (int i = 0; i < 2; i++) {
                                 tempArray[i] = split[i];
@@ -156,9 +150,18 @@ public class Client implements Runnable {
                         }
                         break;
                     case "PM":
-                        String toUserName = split[1];
-                        String message = split[2];
-                        split[2] = encryption.encrypt(toUserName, message);
+                        if (split.length > 2) {
+                            String toUserName = split[1];
+                            String message = split[2];
+                            split[2] = encryption.encrypt(toUserName, message);
+                        } else if (split.length == 2) {
+                            String[] tempArray = new String[3];
+                            for (int i = 0; i < 2; i++) {
+                                tempArray[i] = split[i];
+                            }
+                            tempArray[2] = "";
+                            split = tempArray;
+                        }
                         break;
                     default:
                         break;

@@ -71,11 +71,6 @@ public class Server {
         }
     }
 
-    public String helpMessage() {
-        // TODO: 11/30/17 create HELP request to see all the commands.
-        return "";
-    }
-
     /**
      * This thread sleeps for somewhere between 10 to 20 seconds and then drops the
      * client thread. This is done to simulate a lost in connection.
@@ -259,17 +254,17 @@ public class Server {
                                 } else {
                                     for (ClientThread ct : threads) {
                                         if (ct.getUsername().equals(message.getTarget())) {
+                                            userFound = true;
                                             if (message.getPayload().isEmpty()) {
                                                 writeToClient("-ERR can't send empty message!");
                                             } else {
                                                 ct.writeToClient("PM [" + getUsername() + "] " + message.getPayload());
-                                                userFound = true;
+                                                writeToClient("+OK");
                                             }
                                         }
                                     }
-                                    if (userFound) {
-                                        writeToClient("+OK");
-                                    } else {
+
+                                    if (!userFound) {
                                         writeToClient("-ERR user does not exists!");
                                     }
                                 }
@@ -446,19 +441,7 @@ public class Server {
                                 }
                                 break;
                             case HELP:
-                                System.out.println("UL, (Example UL) used to get all users in server!\n" +
-                                        "        GL,(Example GL) used to get all groups in server!\n" +
-                                        "        GLU,(Example GLU name) used to get all group that the user is in!\n" +
-                                        "        PM,(Example PM name message) used to get send a private message!\n" +
-                                        "        BCST,(Example BCST message) used to send all users in server a message!\n" +
-                                        "        CG,(Example CG name) used to create a group!\n" +
-                                        "        JOIN,(Example JOIN groupName) used to join a group!\n" +
-                                        "        LEAVE,(Example LEAVE groupName) used to leave a group!\n" +
-                                        "        GROUP,(Example GROUP groupName message) used to message all users int he group!\n" +
-                                        "        KICK,(Example KICK groupName name) used to kick a user out of a group!\n" +
-                                        "        BAN,(Example BAN groupName name) used to ban a user from a group!\n" +
-                                        "        HELP,(Example HELP) used to get info for the key words!\n" +
-                                        "        QUIT, (Example QUIT) used to leave the server");
+                                helpMessage();
                                 break;
                             case FILE:
                                 fileSocket = new FileTransfer(new Socket(), this, null);
@@ -502,7 +485,7 @@ public class Server {
                     }
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                System.out.println(this.getUsername() + " disconnected without saying goodbye! :(");
                 threads.remove(this);
             }
         }
@@ -600,6 +583,22 @@ public class Server {
             } else {
                 System.out.println(directionString + "[" + getUsername() + "] " + message + conf.RESET_CLI_COLORS);
             }
+        }
+
+        public String helpMessage() {
+            return "UL, (Example UL) used to get all users in server!\n" +
+                    "GL,(Example GL) used to get all groups in server!\n" +
+                    "GLU,(Example GLU name) used to get all group that the user is in!\n" +
+                    "PM,(Example PM name message) used to get send a private message!\n" +
+                    "BCST,(Example BCST message) used to send all users in server a message!\n" +
+                    "CG,(Example CG name) used to create a group!\n" +
+                    "JOIN,(Example JOIN groupName) used to join a group!\n" +
+                    "LEAVE,(Example LEAVE groupName) used to leave a group!\n" +
+                    "GROUP,(Example GROUP groupName message) used to message all users int he group!\n" +
+                    "KICK,(Example KICK groupName name) used to kick a user out of a group!\n" +
+                    "BAN,(Example BAN groupName name) used to ban a user from a group!\n" +
+                    "HELP,(Example HELP) used to get info for the key words!\n" +
+                    "QUIT, (Example QUIT) used to leave the server";
         }
     }
 }

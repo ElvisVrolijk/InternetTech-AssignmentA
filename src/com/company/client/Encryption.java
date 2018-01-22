@@ -61,11 +61,15 @@ public class Encryption {
 
     String encrypt(String userName, String message) {
         try {
-            ecipher.init(Cipher.ENCRYPT_MODE, publicKeyMap.get(userName));
-            byte[] utf8 = message.getBytes("UTF8");
-            byte[] enc = ecipher.doFinal(utf8);
-            enc = BASE64EncoderStream.encode(enc);
-            return new String(enc);
+            if (publicKeyMap.containsKey(userName)) {
+                ecipher.init(Cipher.ENCRYPT_MODE, publicKeyMap.get(userName));
+                byte[] utf8 = message.getBytes("UTF8");
+                byte[] enc = ecipher.doFinal(utf8);
+                enc = BASE64EncoderStream.encode(enc);
+                return new String(enc);
+            } else {
+                return message;
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
