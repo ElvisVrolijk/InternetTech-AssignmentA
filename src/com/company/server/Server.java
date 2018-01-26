@@ -1,8 +1,6 @@
 package com.company.server;
 
 import com.company.server.group.Group;
-import javafx.util.Pair;
-import sun.net.ftp.FtpClient;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -18,12 +16,11 @@ import static com.company.server.ServerState.*;
 public class Server {
 
     private ServerSocket serverSocket;
-    private ServerSocket serverFileSocket;
+    private static ServerSocket serverFileSocket;
     private static Set<ClientThread> threads;
     private static Set<Group> groups;
     private static Map<String, String> publicKeys;
     private static ArrayList<FileTransfer> fileTransactions;
-    private static Queue<FileTransfer> pendingFileTransactions; // sender username, receiver username
     private static ServerConfiguration conf;
 
 
@@ -31,7 +28,6 @@ public class Server {
         this.conf = conf;
         this.groups = new HashSet<>();
         this.fileTransactions = new ArrayList<>();
-        pendingFileTransactions = new LinkedList<FileTransfer>();
         this.publicKeys = new HashMap<>();
     }
 
@@ -50,12 +46,6 @@ public class Server {
                 // Wait for an incoming client-connection request (blocking).
                 Socket socket = serverSocket.accept();
 
-                // Wait for an incoming file-connection request.
-                Socket fileSocket = serverFileSocket.accept();
-                FileTransfer transaction = new FileTransfer();
-                transaction.setSenderStream(new DataInputStream(fileSocket.getInputStream()));
-
-                pendingFileTransactions.add(transaction);
 
 // TODO: 1/26/2018 at this point I need to get (somehow) file input stream a
                 // When a new connection has been established, start a new thread.
@@ -72,6 +62,23 @@ public class Server {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static class FileSocketConnectorThread implements Runnable {
+        Socket fileSocket;
+        @Override
+        public void run() {
+            //Wait for an incoming file-connection request.
+            try {
+                fileSocket = serverFileSocket.accept();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        Socket getFileSocket() {
+            return fileSocket;
         }
     }
 
@@ -111,6 +118,10 @@ public class Server {
         private Socket socket;
         private ServerState state;
         private String username;
+
+        //file streams
+        private DataOutputStream receiveStream;
+        private DataInputStream sendStream;
 
         public ClientThread(Socket socket) {
             this.state = INIT;
@@ -406,9 +417,9 @@ public class Server {
                                 groupFound = false;
                                 userFound = false;
                                 if (message.getTarget().isEmpty()) {
-                                    writeToClient("-ERR no group name edit! (example: KICK groupName memberName)");
+                                    writeToClient("-ERR no group name edit! (example: BAN groupName memberName)");
                                 } else if (message.getPayload().isEmpty()) {
-                                    writeToClient("-ERR empty member name is not aloud! (example: KICK groupName memberName)");
+                                    writeToClient("-ERR empty member name is not aloud! (example: BAN groupName memberName)");
                                 } else {
                                     for (Group group : groups) {
                                         if (group.getName().equals(message.getTarget())) {
@@ -442,14 +453,33 @@ public class Server {
                                 for (ClientThread ct : threads) {
                                     if (ct.getUsername().equals(message.getTarget()) && ct != this) {
                                         ct.writeToClient("FILE [" + getUsername() + "]: run command ACCEPT to start loading or REJECT to cancel");
+                                        this.writeToClient("OPEN_CONNECTION");
+                                        //create a thread and wait until user will try to connect it's file socket
+                                        FileSocketConnectorThread ftt = new FileSocketConnectorThread();
+                                        while (ftt.getFileSocket() == null) {
+                                            ftt.run();
+                                        }
+                                        this.sendStream = new DataInputStream(ftt.getFileSocket().getInputStream());
                                     }
                                 }
                                 break;
                             case ACCEPT:
                                 for (ClientThread ct : threads) {
                                     if (ct.getUsername().equals(message.getTarget())) {
+                                        this.writeToClient("OPEN_CONNECTION");
+
+
+                                        FileSocketConnectorThread ftt = new FileSocketConnectorThread();
+                                        while (ftt.getFileSocket() == null) {
+                                            ftt.run();
+                                        }
+                                        this.receiveStream = new DataOutputStream(ftt.getFileSocket().getOutputStream());
+
                                         this.writeToClient("RECEIVE_FILE"); //do this first
                                         ct.writeToClient("SEND_FILE");
+
+                                        FileTransfer fileTransfer = new FileTransfer(ct.sendStream, this.receiveStream);
+                                        fileTransfer.run();
                                     }
                                 }
                                 break;

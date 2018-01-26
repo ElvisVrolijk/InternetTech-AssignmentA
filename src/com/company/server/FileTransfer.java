@@ -15,6 +15,8 @@ public class FileTransfer implements Runnable {
     private DataInputStream senderStream;
     private DataOutputStream receiverStream;
 
+    private boolean done;
+
     /**
      * Constructor
      * @param senderStream Sender's data output stream.
@@ -23,6 +25,8 @@ public class FileTransfer implements Runnable {
     public FileTransfer(DataInputStream senderStream, DataOutputStream receiverStream) {
         this.senderStream = senderStream;
         this.receiverStream = receiverStream;
+
+        this.done = false;
     }
 
     public FileTransfer() {
@@ -34,12 +38,10 @@ public class FileTransfer implements Runnable {
         try {
             while((read = senderStream.read()) > 0) {
                 receiverStream.write(read);
-                if (false) {
-                    // TODO: 1/26/2018 send messages to the both of clients
-                    // TODO: 1/26/2018 isClosed (from client)
-                    break;
-                }
             }
+
+
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -48,6 +50,10 @@ public class FileTransfer implements Runnable {
     ///////////////////////////////////////////////////////////////////////////
     // Getters
     ///////////////////////////////////////////////////////////////////////////
+
+    public boolean isDone() {
+        return done;
+    }
 
     public DataInputStream getSenderStream() {
         return senderStream;

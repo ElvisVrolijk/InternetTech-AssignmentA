@@ -116,7 +116,7 @@ public class Client implements Runnable {
         }
     }
 
-    private void processResponse(String message) {
+    private void processResponse(String message) throws IOException {
         boolean isPublicKeyMsg = false;
         String[] split = message.split(" ");
         String type = split[0];
@@ -129,10 +129,12 @@ public class Client implements Runnable {
             case "PM":
                 split[2] = encryption.decrypt(split[2]);
                 break;
+            case "OPEN_CONNECTION":
+                fileSocket = new Socket("localhost", FILE_PORT);
+                break;
             case "SEND_FILE":
                 //create output stream and start to send file
                 try {
-                    fileSocket = new Socket("localhost", FILE_PORT);
                     fileDataOut = new DataOutputStream(fileSocket.getOutputStream());
                     fin = new FileInputStream(this.fileLocation);
 
@@ -155,7 +157,9 @@ public class Client implements Runnable {
                     fileSocket = new Socket("localhost", FILE_PORT);
                     fileDataIn = new DataInputStream(fileSocket.getInputStream());
                     //save file with any extension
-                    fout = new FileOutputStream("saved_files/file_" + filesCounter++ + "." + message.split("")[1]);
+                    File file = new File("/Users/user/Desktop/test.txt");
+                    file.createNewFile();
+                    fout = new FileOutputStream(file);
 
                     byte[] buffer = new byte[4096];
 
