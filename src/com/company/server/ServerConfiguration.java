@@ -6,6 +6,7 @@ public class ServerConfiguration {
     public final String WELCOME_MESSAGE = "Welkom to WhatsUpp!";
     public final String VERSION = "1.0";
     public final int SERVER_PORT = 1337;
+    public final int SERVER_FILE_PORT = 1347;
     // Colors for the console.
     public final String RESET_CLI_COLORS = "\u001B[0m";   // ANSI RESET
     public final String CLI_COLOR_INCOMING = "\u001B[31m";    // ANSI RED

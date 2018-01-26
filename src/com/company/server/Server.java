@@ -16,28 +16,19 @@ import static com.company.server.ServerState.*;
 public class Server {
 
     private ServerSocket serverSocket;
+    private static ServerSocket serverFileSocket;
     private static Set<ClientThread> threads;
     private static Set<Group> groups;
     private static Map<String, String> publicKeys;
-    private static Set<FileTransfer> fileTransfers;
+    private static ArrayList<FileTransfer> fileTransactions;
     private static ServerConfiguration conf;
 
 
     public Server(ServerConfiguration conf) {
         this.conf = conf;
         this.groups = new HashSet<>();
-        this.fileTransfers = new HashSet<>();
+        this.fileTransactions = new ArrayList<>();
         this.publicKeys = new HashMap<>();
-    }
-
-
-    public ClientThread findClientByUsername(String username) {
-        for (ClientThread ct : threads) {
-            if (ct.getUsername().equals(username)) {
-                return ct;
-            }
-        }
-        return null;
     }
 
     /**
@@ -48,12 +39,15 @@ public class Server {
         // Create a socket to wait for clients.
         try {
             serverSocket = new ServerSocket(conf.SERVER_PORT);
+            serverFileSocket = new ServerSocket(conf.SERVER_FILE_PORT);
             threads = new HashSet<>();
 
             while (true) {
                 // Wait for an incoming client-connection request (blocking).
                 Socket socket = serverSocket.accept();
 
+
+// TODO: 1/26/2018 at this point I need to get (somehow) file input stream a
                 // When a new connection has been established, start a new thread.
                 ClientThread ct = new ClientThread(socket);
                 threads.add(ct);
@@ -68,6 +62,23 @@ public class Server {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static class FileSocketConnectorThread implements Runnable {
+        Socket fileSocket;
+        @Override
+        public void run() {
+            //Wait for an incoming file-connection request.
+            try {
+                fileSocket = serverFileSocket.accept();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        Socket getFileSocket() {
+            return fileSocket;
         }
     }
 
@@ -107,11 +118,10 @@ public class Server {
         private Socket socket;
         private ServerState state;
         private String username;
-        private FileTransfer fileSocket;
 
-        public void setFileSocket(FileTransfer fileSocket) {
-            this.fileSocket = fileSocket;
-        }
+        //file streams
+        private DataOutputStream receiveStream;
+        private DataInputStream sendStream;
 
         public ClientThread(Socket socket) {
             this.state = INIT;
@@ -120,10 +130,6 @@ public class Server {
 
         public String getUsername() {
             return username;
-        }
-
-        public OutputStream getOutputStream() {
-            return os;
         }
 
         public void run() {
@@ -414,9 +420,9 @@ public class Server {
                                 groupFound = false;
                                 userFound = false;
                                 if (message.getTarget().isEmpty()) {
-                                    writeToClient("-ERR no group name edit! (example: KICK groupName memberName)");
+                                    writeToClient("-ERR no group name edit! (example: BAN groupName memberName)");
                                 } else if (message.getPayload().isEmpty()) {
-                                    writeToClient("-ERR empty member name is not aloud! (example: KICK groupName memberName)");
+                                    writeToClient("-ERR empty member name is not aloud! (example: BAN groupName memberName)");
                                 } else {
                                     for (Group group : groups) {
                                         if (group.getName().equals(message.getTarget())) {
@@ -447,34 +453,42 @@ public class Server {
                                 helpMessage();
                                 break;
                             case FILE:
-                                fileSocket = new FileTransfer(new Socket(), this, null);
                                 for (ClientThread ct : threads) {
                                     if (ct.getUsername().equals(message.getTarget()) && ct != this) {
                                         ct.writeToClient("FILE [" + getUsername() + "]: run command ACCEPT to start loading or REJECT to cancel");
-                                        fileSocket.setReceiver(ct);
+                                        this.writeToClient("OPEN_CONNECTION");
+                                        //create a thread and wait until user will try to connect it's file socket
+                                        FileSocketConnectorThread ftt = new FileSocketConnectorThread();
+                                        while (ftt.getFileSocket() == null) {
+                                            ftt.run();
+                                        }
+                                        this.sendStream = new DataInputStream(ftt.getFileSocket().getInputStream());
                                     }
                                 }
                                 break;
                             case ACCEPT:
-                                for (FileTransfer ft : fileTransfers) {
-                                    if (ft.getReceiver().getUsername().equals(this.getUsername())) {
-                                        //this file is for you
-                                        if (message.getTarget().equals(ft.getSender().getUsername())) {
-                                            //this file is from the right person
-                                            for (ClientThread ct : threads) {
-                                                if (ct.getUsername().equals(message.getTarget()) && ct != this) {
-                                                    ct.writeToClient("FILE [" + ct.getUsername() + "]: accepted");
-                                                    fileSocket.setReceiver(ct);
-                                                }
-                                            }
+                                for (ClientThread ct : threads) {
+                                    if (ct.getUsername().equals(message.getTarget())) {
+                                        this.writeToClient("OPEN_CONNECTION");
+
+
+                                        FileSocketConnectorThread ftt = new FileSocketConnectorThread();
+                                        while (ftt.getFileSocket() == null) {
+                                            ftt.run();
                                         }
+                                        this.receiveStream = new DataOutputStream(ftt.getFileSocket().getOutputStream());
+
+                                        this.writeToClient("RECEIVE_FILE"); //do this first
+                                        ct.writeToClient("SEND_FILE");
+
+                                        FileTransfer fileTransfer = new FileTransfer(ct.sendStream, this.receiveStream);
+                                        fileTransfer.run();
                                     }
                                 }
                                 break;
                             case REJECT:
                                 break;
                             case QUIT:
-                                // FIXME: 11/29/17 doesnt disconnect the user
                                 // Close connection
                                 state = FINISHED;
                                 writeToClient("+OK Goodbye");

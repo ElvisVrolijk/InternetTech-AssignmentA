@@ -22,8 +22,20 @@ public class Client implements Runnable {
     private static BufferedReader inputLine = null;
     private static boolean close = false;
     private static Encryption encryption = Encryption.getInstance();
+
+    //File socket
+    private static Socket fileSocket = null;
+    private static FileInputStream fin = null;
+    private static DataOutputStream fileDataOut = null;
+    private static FileOutputStream fout = null;
+    private static DataInputStream fileDataIn = null;
+    private String fileLocation = null;
+    private final static int MAX_FILE_BYTES = 5242880; // 5 MB
+    private static int filesCounter = 0;
+
     //Port number
     private final static int PORT = 1337;
+    private final static int FILE_PORT = 1347;
 
     //
     private final static Timer resendMessage = new Timer();
@@ -87,6 +99,13 @@ public class Client implements Runnable {
                 msgSent = true;
 
                 resendMessage(writer);
+                //save file location
+                if (text.split("")[0].equals("FILE")) {
+                    this.fileLocation = text.split("")[2];
+                }
+
+                writer.println(sendMessage(text));
+                writer.flush();
             }
         }
     }
@@ -161,7 +180,7 @@ public class Client implements Runnable {
         }
     }
 
-    private void processResponse(String message) {
+    private void processResponse(String message) throws IOException {
         boolean isPublicKeyMsg = false;
         String[] split = message.split(" ");
         String type = split[0];
@@ -173,6 +192,53 @@ public class Client implements Runnable {
                 break;
             case "PM":
                 split[2] = encryption.decrypt(split[2]);
+                break;
+            case "OPEN_CONNECTION":
+                fileSocket = new Socket("localhost", FILE_PORT);
+                break;
+            case "SEND_FILE":
+                //create output stream and start to send file
+                try {
+                    fileDataOut = new DataOutputStream(fileSocket.getOutputStream());
+                    fin = new FileInputStream(this.fileLocation);
+
+                    byte[] buffer = new byte[4096];
+
+                    while (fin.read(buffer) > 0) {
+                        fileDataOut.write(buffer);
+                    }
+
+                    fin.close();
+                    fileDataOut.close();
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case "RECEIVE_FILE":
+                //create input stream and start to save file
+                try {
+                    fileSocket = new Socket("localhost", FILE_PORT);
+                    fileDataIn = new DataInputStream(fileSocket.getInputStream());
+                    //save file with any extension
+                    File file = new File("/Users/user/Desktop/test.txt");
+                    file.createNewFile();
+                    fout = new FileOutputStream(file);
+
+                    byte[] buffer = new byte[4096];
+
+//                    int filesize = 15123;
+                    int read = 0;
+                    while((read = fileDataIn.read(buffer, 0, buffer.length)) > 0) {
+                        fout.write(buffer, 0, read);
+                    }
+
+                    fout.close();
+                    fileDataIn.close();
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 break;
             default:
                 break;
@@ -248,5 +314,13 @@ public class Client implements Runnable {
         } else {
             return fullMessage;
         }
+    }
+
+    public static DataOutputStream getFileDataOut() {
+        return fileDataOut;
+    }
+
+    public static DataInputStream getFileDataIn() {
+        return fileDataIn;
     }
 }
