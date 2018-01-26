@@ -167,11 +167,14 @@ public class Server {
                                             if (ct != this && message.getTarget().equals(ct.getUsername())) {
                                                 userExists = true;
                                                 break;
+                                            } else if (ct == this && ct.getUsername() != null) {
+                                                userExists = true;
+                                                break;
                                             }
                                         }
                                         if (userExists) {
 //                                        state = FINISHED;
-                                            writeToClient("-ERR user already logged in");
+                                            writeToClient("-ERR user already logged in!");
                                         } else {
                                             state = CONNECTED;
                                             this.username = message.getTarget();

@@ -21,22 +21,22 @@ public class Encryption {
 
     private static Encryption instance;
 
-    private final static String KEYALGORITHM = "RSA";
+    private final static String KEY_ALGORITHM = "RSA";
 
     private static PublicKey publicKey;
 
     private Encryption() {
         try {
-            // generate secret key using DES algorithm
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance(KEYALGORITHM);
+            // generate secret key using RSA algorithm
+            KeyPairGenerator keyGen = KeyPairGenerator.getInstance(KEY_ALGORITHM);
             keyGen.initialize(1024);
             KeyPair keyPair = keyGen.genKeyPair();
             PrivateKey privateKey = keyPair.getPrivate();
 
             publicKey = keyPair.getPublic();
 
-            ecipher = Cipher.getInstance(KEYALGORITHM);
-            dcipher = Cipher.getInstance(KEYALGORITHM);
+            ecipher = Cipher.getInstance(KEY_ALGORITHM);
+            dcipher = Cipher.getInstance(KEY_ALGORITHM);
 
             // initialize the ciphers with the given key
             dcipher.init(Cipher.DECRYPT_MODE, privateKey);
@@ -93,7 +93,7 @@ public class Encryption {
             byte[] publicKeyByte = Base64.decode(publicKeyStr);
 
             // The bytes can be converted back to public and private key objects
-            KeyFactory keyFactory = KeyFactory.getInstance(KEYALGORITHM);
+            KeyFactory keyFactory = KeyFactory.getInstance(KEY_ALGORITHM);
 
             EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyByte);
             PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
