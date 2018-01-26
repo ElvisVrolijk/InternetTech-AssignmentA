@@ -103,9 +103,6 @@ public class Client implements Runnable {
                 if (text.split("")[0].equals("FILE")) {
                     this.fileLocation = text.split("")[2];
                 }
-
-                writer.println(sendMessage(text));
-                writer.flush();
             }
         }
     }
