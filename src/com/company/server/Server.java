@@ -1,6 +1,8 @@
 package com.company.server;
 
 import com.company.server.group.Group;
+import javafx.util.Pair;
+import sun.net.ftp.FtpClient;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -16,28 +18,21 @@ import static com.company.server.ServerState.*;
 public class Server {
 
     private ServerSocket serverSocket;
+    private ServerSocket serverFileSocket;
     private static Set<ClientThread> threads;
     private static Set<Group> groups;
     private static Map<String, String> publicKeys;
-    private static Set<FileTransfer> fileTransfers;
+    private static ArrayList<FileTransfer> fileTransactions;
+    private static Queue<FileTransfer> pendingFileTransactions; // sender username, receiver username
     private static ServerConfiguration conf;
 
 
     public Server(ServerConfiguration conf) {
         this.conf = conf;
         this.groups = new HashSet<>();
-        this.fileTransfers = new HashSet<>();
+        this.fileTransactions = new ArrayList<>();
+        pendingFileTransactions = new LinkedList<FileTransfer>();
         this.publicKeys = new HashMap<>();
-    }
-
-
-    public ClientThread findClientByUsername(String username) {
-        for (ClientThread ct : threads) {
-            if (ct.getUsername().equals(username)) {
-                return ct;
-            }
-        }
-        return null;
     }
 
     /**
@@ -48,12 +43,21 @@ public class Server {
         // Create a socket to wait for clients.
         try {
             serverSocket = new ServerSocket(conf.SERVER_PORT);
+            serverFileSocket = new ServerSocket(conf.SERVER_FILE_PORT);
             threads = new HashSet<>();
 
             while (true) {
                 // Wait for an incoming client-connection request (blocking).
                 Socket socket = serverSocket.accept();
 
+                // Wait for an incoming file-connection request.
+                Socket fileSocket = serverFileSocket.accept();
+                FileTransfer transaction = new FileTransfer();
+                transaction.setSenderStream(new DataInputStream(fileSocket.getInputStream()));
+
+                pendingFileTransactions.add(transaction);
+
+// TODO: 1/26/2018 at this point I need to get (somehow) file input stream a
                 // When a new connection has been established, start a new thread.
                 ClientThread ct = new ClientThread(socket);
                 threads.add(ct);
@@ -107,11 +111,6 @@ public class Server {
         private Socket socket;
         private ServerState state;
         private String username;
-        private FileTransfer fileSocket;
-
-        public void setFileSocket(FileTransfer fileSocket) {
-            this.fileSocket = fileSocket;
-        }
 
         public ClientThread(Socket socket) {
             this.state = INIT;
@@ -120,10 +119,6 @@ public class Server {
 
         public String getUsername() {
             return username;
-        }
-
-        public OutputStream getOutputStream() {
-            return os;
         }
 
         public void run() {
@@ -444,34 +439,23 @@ public class Server {
                                 helpMessage();
                                 break;
                             case FILE:
-                                fileSocket = new FileTransfer(new Socket(), this, null);
                                 for (ClientThread ct : threads) {
                                     if (ct.getUsername().equals(message.getTarget()) && ct != this) {
                                         ct.writeToClient("FILE [" + getUsername() + "]: run command ACCEPT to start loading or REJECT to cancel");
-                                        fileSocket.setReceiver(ct);
                                     }
                                 }
                                 break;
                             case ACCEPT:
-                                for (FileTransfer ft : fileTransfers) {
-                                    if (ft.getReceiver().getUsername().equals(this.getUsername())) {
-                                        //this file is for you
-                                        if (message.getTarget().equals(ft.getSender().getUsername())) {
-                                            //this file is from the right person
-                                            for (ClientThread ct : threads) {
-                                                if (ct.getUsername().equals(message.getTarget()) && ct != this) {
-                                                    ct.writeToClient("FILE [" + ct.getUsername() + "]: accepted");
-                                                    fileSocket.setReceiver(ct);
-                                                }
-                                            }
-                                        }
+                                for (ClientThread ct : threads) {
+                                    if (ct.getUsername().equals(message.getTarget())) {
+                                        this.writeToClient("RECEIVE_FILE"); //do this first
+                                        ct.writeToClient("SEND_FILE");
                                     }
                                 }
                                 break;
                             case REJECT:
                                 break;
                             case QUIT:
-                                // FIXME: 11/29/17 doesnt disconnect the user
                                 // Close connection
                                 state = FINISHED;
                                 writeToClient("+OK Goodbye");

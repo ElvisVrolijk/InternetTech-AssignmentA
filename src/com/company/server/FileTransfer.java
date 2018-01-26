@@ -8,51 +8,60 @@ import java.net.Socket;
  */
 public class FileTransfer implements Runnable {
 
-    private Server.ClientThread sender;
-    private Server.ClientThread receiver;
-    private Socket socket;
-    private InputStream in;
-    private OutputStream out;
+    ///////////////////////////////////////////////////////////////////////////
+    // Properties
+    ///////////////////////////////////////////////////////////////////////////
 
-    public FileTransfer(Socket socket, Server.ClientThread sender, Server.ClientThread receiver) {
-        this.socket = socket;
-        this.sender = sender;
-        this.receiver = receiver;
+    private DataInputStream senderStream;
+    private DataOutputStream receiverStream;
 
+    /**
+     * Constructor
+     * @param senderStream Sender's data output stream.
+     * @param receiverStream Receiver's data input stream
+     */
+    public FileTransfer(DataInputStream senderStream, DataOutputStream receiverStream) {
+        this.senderStream = senderStream;
+        this.receiverStream = receiverStream;
+    }
+
+    public FileTransfer() {
+    }
+
+    @Override
+    public void run() {
+        int read = 0;
         try {
-            this.in = this.socket.getInputStream();
-            this.out = this.socket.getOutputStream();
+            while((read = senderStream.read()) > 0) {
+                receiverStream.write(read);
+                if (false) {
+                    // TODO: 1/26/2018 send messages to the both of clients
+                    // TODO: 1/26/2018 isClosed (from client)
+                    break;
+                }
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    @Override
-    public void run() {
+    ///////////////////////////////////////////////////////////////////////////
+    // Getters
+    ///////////////////////////////////////////////////////////////////////////
 
+    public DataInputStream getSenderStream() {
+        return senderStream;
     }
 
-    public Server.ClientThread getSender() {
-        return sender;
+    public DataOutputStream getReceiverStream() {
+        return receiverStream;
     }
 
-    public Server.ClientThread getReceiver() {
-        return receiver;
+    public void setSenderStream(DataInputStream senderStream) {
+        this.senderStream = senderStream;
     }
 
-    public Socket getSocket() {
-        return socket;
-    }
-
-    public InputStream getIn() {
-        return in;
-    }
-
-    public OutputStream getOut() {
-        return out;
-    }
-
-    public void setReceiver(Server.ClientThread receiver) {
-        this.receiver = receiver;
+    public void setReceiverStream(DataOutputStream receiverStream) {
+        this.receiverStream = receiverStream;
     }
 }
