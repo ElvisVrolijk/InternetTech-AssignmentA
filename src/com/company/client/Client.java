@@ -100,8 +100,8 @@ public class Client implements Runnable {
 
                 resendMessage(writer);
                 //save file location
-                if (text.split("")[0].equals("FILE")) {
-                    this.fileLocation = text.split("")[2];
+                if (text.split(" ")[0].equals("FILE")) {
+                    this.fileLocation = text.split(" ")[2];
                 }
             }
         }
@@ -197,7 +197,7 @@ public class Client implements Runnable {
                 //create output stream and start to send file
                 try {
                     fileDataOut = new DataOutputStream(fileSocket.getOutputStream());
-                    fin = new FileInputStream(this.fileLocation);
+                    fin = new FileInputStream("C:\\Users\\S1mpler\\Desktop\\InternetTech\\src\\com\\company\\client\\" + this.fileLocation);
 
                     byte[] buffer = new byte[4096];
 
@@ -218,7 +218,7 @@ public class Client implements Runnable {
                     fileSocket = new Socket("localhost", FILE_PORT);
                     fileDataIn = new DataInputStream(fileSocket.getInputStream());
                     //save file with any extension
-                    File file = new File("/Users/user/Desktop/test.txt");
+                    File file = new File("C:\\Users\\S1mpler\\Desktop\\InternetTech\\src\\com\\company\\client\\test" + filesCounter + ".txt");
                     file.createNewFile();
                     fout = new FileOutputStream(file);
 
