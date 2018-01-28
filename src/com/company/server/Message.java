@@ -2,27 +2,27 @@ package com.company.server;
 
 public class Message {
     public enum MessageType {
-        HELO,
-        UL,
-        GL,
-        GLU,
-        MGL,
-        ADMIN,
-        PM,
-        BCST,
-        CG,
-        JOIN,
-        LEAVE,
-        GROUP,
-        KICK,
-        BAN,
-        UNBAN,
-        FILE,
-        ACCEPT,
-        REJECT,
-        HELP,
-        QUIT,
-        UNKOWN
+        HELO,   // login
+        UL,     // list all users
+        GL,     // list all groups
+        GLU,    // list the groups of a user
+        GU,     // list the members of a group
+        GM,    // private message to a group
+        ADMIN,  // show admin of the group
+        PM,     // private message to a user
+        BCST,   // broadcast a message to every user
+        CG,     // create a group
+        JOIN,   // join a group
+        LEAVE,  // leave a group
+        KICK,   // kick a user from the group (admin)
+        BAN,    // ban a user in the group (admin)
+        UNBAN,  // unban a user in the group (admin)
+        FILE,   // send a file to a user
+        ACCEPT, // accept a file from the user
+        REJECT, // reject a file from the user
+        HELP,   // list all commands
+        QUIT,   // quit the chat
+        UNKOWN  // internal command (not for user)
     }
 
     private String line;
@@ -97,7 +97,7 @@ public class Message {
                 || getMessageType().equals(MessageType.HELO)
                 || getMessageType().equals(MessageType.JOIN)
                 || getMessageType().equals(MessageType.CG)
-                || getMessageType().equals(MessageType.GROUP)
+                || getMessageType().equals(MessageType.GM)
                 || getMessageType().equals(MessageType.KICK)
                 || getMessageType().equals(MessageType.LEAVE)
                 || getMessageType().equals(MessageType.BAN)

@@ -354,7 +354,7 @@ public class Server {
                                     }
                                 }
                                 break;
-                            case GROUP:
+                            case GM:
                                 groupFound = false;
                                 if (message.getTarget().isEmpty()) {
                                     writeToClient("-ERR no group name edit! (example: GROUP groupName message)");
@@ -371,7 +371,7 @@ public class Server {
                                                     }
                                                     writeToClient("+OK");
                                                 } else {
-                                                    writeToClient("-ERR you are banned from group '" + message.getTarget() + "'!");
+                                                    writeToClient("-ERR you are banned in the group '" + message.getTarget() + "'!");
                                                 }
                                             } else {
                                                 writeToClient("-ERR you are not a member of the group '" + message.getTarget() + "'!");
