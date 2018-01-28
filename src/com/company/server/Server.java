@@ -450,13 +450,14 @@ public class Server {
                                 }
                                 break;
                             case HELP:
-                                helpMessage();
+                                this.writeToClient(helpMessage());
                                 break;
                             case FILE:
                                 for (ClientThread ct : threads) {
                                     if (ct.getUsername().equals(message.getTarget()) && ct != this) {
-                                        ct.writeToClient("FILE [" + getUsername() + "]: run command ACCEPT to start loading or REJECT to cancel");
+                                        ct.writeToClient("FILE " + message.getPayload() + " [" + getUsername() + "]: run a command:\nACCEPT " + getUsername() + "\nREJECT " + getUsername());
                                         this.writeToClient("OPEN_CONNECTION");
+                                        this.writeToClient("Waiting to be accepted...");
                                         //create a thread and wait until user will try to connect it's file socket
                                         FileSocketConnectorThread ftt = new FileSocketConnectorThread();
                                         while (ftt.getFileSocket() == null) {
@@ -467,26 +468,47 @@ public class Server {
                                 }
                                 break;
                             case ACCEPT:
+                                userFound = false;
                                 for (ClientThread ct : threads) {
-                                    if (ct.getUsername().equals(message.getTarget())) {
+                                    if (ct.getUsername().equals(message.getTarget()) && message.getTarget() != null) {
+                                        userFound = true;
                                         this.writeToClient("OPEN_CONNECTION");
-
-
                                         FileSocketConnectorThread ftt = new FileSocketConnectorThread();
                                         while (ftt.getFileSocket() == null) {
                                             ftt.run();
                                         }
+
                                         this.receiveStream = new DataOutputStream(ftt.getFileSocket().getOutputStream());
 
-                                        this.writeToClient("RECEIVE_FILE"); //do this first
-                                        ct.writeToClient("SEND_FILE");
+                                        this.writeToClient("RECEIVING_FILE");
 
                                         FileTransfer fileTransfer = new FileTransfer(ct.sendStream, this.receiveStream);
-                                        fileTransfer.run();
+
+                                        while (!fileTransfer.isDone()) {
+                                            ct.writeToClient("SENDING_FILE");
+                                            fileTransfer.run();
+                                        }
+
+                                        ct.writeToClient("FILE_SENT");
+                                        this.writeToClient("FILE_RECEIVED");
                                     }
+                                }
+                                if (!userFound) {
+                                    this.writeToClient("-ERR User " + message.getTarget() + " does NOT exist or did NOT send you a file!");
                                 }
                                 break;
                             case REJECT:
+                                userFound = false;
+                                for (ClientThread ct : threads) {
+                                    if (ct.getUsername().equals(message.getTarget()) && message.getTarget() != null) {
+                                        userFound = true;
+                                        ct.sendStream = null;
+                                        ct.writeToClient("-ERR User " + getUsername() + " has rejected your file!");
+                                    }
+                                }
+                                if (!userFound) {
+                                    this.writeToClient("-ERR User " + message.getTarget() + " does NOT exist or did NOT send you a file!");
+                                }
                                 break;
                             case QUIT:
                                 // Close connection

@@ -65,8 +65,12 @@ public class Message {
             return line;
         }
 
+        if (getMessageType().equals(MessageType.FILE)) {
+            return line.split(" ")[2]; //filename
+        }
+
         if (getMessageType().equals(MessageType.KICK)) {
-            return line.substring(getMessageType().name().length() + 1 + target.length() + 1);
+            return line.split(" ")[2]; //username
         }
 
         // Return an empty string if the raw line was null or
@@ -89,8 +93,6 @@ public class Message {
      * @return Returns the target string.
      */
     public String getTarget() {
-        //TODO : what happens if there is no target
-
         if (getMessageType().equals(MessageType.PM)
                 || getMessageType().equals(MessageType.HELO)
                 || getMessageType().equals(MessageType.JOIN)

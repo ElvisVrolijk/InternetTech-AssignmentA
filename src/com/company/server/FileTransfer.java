@@ -40,7 +40,7 @@ public class FileTransfer implements Runnable {
                 receiverStream.write(read);
             }
 
-
+            this.done = true;
 
         } catch (IOException e) {
             e.printStackTrace();

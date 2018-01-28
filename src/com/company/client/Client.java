@@ -29,7 +29,7 @@ public class Client implements Runnable {
     private static DataOutputStream fileDataOut = null;
     private static FileOutputStream fout = null;
     private static DataInputStream fileDataIn = null;
-    private String fileLocation = null;
+    private String fileName = null;
     private final static int MAX_FILE_BYTES = 5242880; // 5 MB
     private static int filesCounter = 0;
 
@@ -43,6 +43,9 @@ public class Client implements Runnable {
     private boolean msgSent = false;
     private boolean gotResponse = true;
     private boolean curruptMessage = false;
+
+    private final static String FILES_TO_SEND_LOCATION = "src/com/company/client/files_to_send/";
+    private final static String FILES_TO_SAVE_LOCATION = "src/com/company/client/saved_files/";
 
     /**
      * Main function.
@@ -101,7 +104,7 @@ public class Client implements Runnable {
                 resendMessage(writer);
                 //save file location
                 if (text.split(" ")[0].equals("FILE")) {
-                    this.fileLocation = text.split(" ")[2];
+                    this.fileName = text.split(" ")[2];
                 }
             }
         }
@@ -190,48 +193,36 @@ public class Client implements Runnable {
             case "PM":
                 split[2] = encryption.decrypt(split[2]);
                 break;
+            case "FILE":
+                this.fileName = split[1];
+                break;
             case "OPEN_CONNECTION":
                 fileSocket = new Socket("localhost", FILE_PORT);
                 break;
-            case "SEND_FILE":
+            case "SENDING_FILE":
                 //create output stream and start to send file
                 try {
                     fileDataOut = new DataOutputStream(fileSocket.getOutputStream());
-                    fin = new FileInputStream("C:\\Users\\S1mpler\\Desktop\\InternetTech\\src\\com\\company\\client\\" + this.fileLocation);
+                    fin = new FileInputStream(FILES_TO_SEND_LOCATION + this.fileName);
 
-                    byte[] buffer = new byte[4096];
-
-                    while (fin.read(buffer) > 0) {
-                        fileDataOut.write(buffer);
-                    }
-
-                    fin.close();
-                    fileDataOut.close();
+                    new FileSender(fileDataOut, fin).run();
 
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
                 break;
-            case "RECEIVE_FILE":
+            case "RECEIVING_FILE":
                 //create input stream and start to save file
                 try {
-                    fileSocket = new Socket("localhost", FILE_PORT);
                     fileDataIn = new DataInputStream(fileSocket.getInputStream());
                     //save file with any extension
-                    File file = new File("C:\\Users\\S1mpler\\Desktop\\InternetTech\\src\\com\\company\\client\\test" + filesCounter + ".txt");
+                    File file = new File(FILES_TO_SAVE_LOCATION + this.fileName);
                     file.createNewFile();
                     fout = new FileOutputStream(file);
 
-                    byte[] buffer = new byte[4096];
+                    //run file saving in a different thread
+                    new Thread(new FileSaver(fileDataIn, fout)).start();
 
-//                    int filesize = 15123;
-                    int read = 0;
-                    while((read = fileDataIn.read(buffer, 0, buffer.length)) > 0) {
-                        fout.write(buffer, 0, read);
-                    }
-
-                    fout.close();
-                    fileDataIn.close();
 
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -244,7 +235,9 @@ public class Client implements Runnable {
         if (!isPublicKeyMsg) {
             String msg = Arrays.toString(split);
             msg = msg.substring(1, msg.length() - 1).replace(",", "");
-            System.out.println(msg);
+
+            if (!msg.split(" ")[0].equals("OPEN_CONNECTION"))
+                System.out.println(msg);
         }
     }
 
@@ -319,5 +312,53 @@ public class Client implements Runnable {
 
     public static DataInputStream getFileDataIn() {
         return fileDataIn;
+    }
+
+    private class FileSaver implements Runnable {
+        private DataInputStream dis;
+        private FileOutputStream fos;
+
+        public FileSaver(DataInputStream dis, FileOutputStream fos) {
+            this.dis = dis;
+            this.fos = fos;
+        }
+
+        @Override
+        public void run() {
+            int read = 0;
+            try {
+                while((read = dis.read()) > 0) {
+                    fos.write(read);
+                }
+                fos.close();
+                dis.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private class FileSender implements Runnable {
+        private DataOutputStream dos;
+        private FileInputStream fis;
+
+        public FileSender(DataOutputStream dos, FileInputStream fis) {
+            this.dos = dos;
+            this.fis = fis;
+        }
+
+        @Override
+        public void run() {
+            try {
+                int read = 0;
+                while ((read = fis.read()) > 0) {
+                    dos.write(read);
+                }
+                dos.close();
+                fis.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
