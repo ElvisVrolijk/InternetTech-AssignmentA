@@ -186,6 +186,7 @@ public class Server {
                                             this.username = message.getTarget();
                                             publicKeys.put(getUsername(), message.getPayload());
                                             writeToClient("+OK " + getUsername());
+                                            writeToClient(this.helpMessage());
                                             for (ClientThread ct : threads) {
                                                 if (ct != this) {
                                                     ct.writeToClient("PK " + getUsername() + " " + message.getPayload());
@@ -225,6 +226,24 @@ public class Server {
                                     writeToClient("+OK");
                                 }
                                 break;
+                            case GU:
+                                boolean groupFound = false;
+                                for (Group group : groups) {
+                                    if (message.getTarget() != null && group.getName().equals(message.getTarget())) {
+                                        groupFound = true;
+                                        for (ClientThread member : group.getMembers()) {
+                                            if (group.isBanned(member)) {
+                                                this.writeToClient("[" + member.getUsername() + "] (banned)");
+                                            } else {
+                                                this.writeToClient("[" + member.getUsername() + "]");
+                                            }
+                                        }
+                                    }
+                                }
+                                if (!groupFound) {
+                                    this.writeToClient("-ERR group " + message.getTarget() + " does NOT exist!");
+                                }
+                                break;
                             case GLU:
                                 if (isEmptyPayload) {
                                     writeToClient("-ERR command needs a target! (example: GLU name");
@@ -247,7 +266,7 @@ public class Server {
                                     }
                                     if (exists) {
                                         if (!inGroup) {
-                                            writeToClient("-ERR user is not in any group!");
+                                            writeToClient("INFO user is not in any group!");
                                         } else {
                                             writeToClient("+OK");
                                         }
@@ -305,13 +324,25 @@ public class Server {
                                         groups.add(new Group(message.getTarget(), this));
                                         writeToClient("+OK Group [" + message.getTarget() + "] was created");
                                     } else {
-                                        writeToClient("-ERR The group [" + message.getTarget() + "] already exists");
+                                        writeToClient("-ERR The group [" + message.getTarget() + "] already exists!");
                                     }
                                     writeToClient("+OK");
                                 }
                                 break;
+                            case ADMIN:
+                                groupFound = false;
+                                for (Group group : groups) {
+                                    if (message.getTarget() != null && group.getName().equals(message.getTarget())) {
+                                        groupFound = true;
+                                        this.writeToClient("[" + group.getAdmin().getUsername() + "] is admin of " + group.getName());
+                                    }
+                                }
+                                if (!groupFound) {
+                                    this.writeToClient("-ERR group " + message.getTarget() + " does NOT exist!");
+                                }
+                                break;
                             case JOIN:
-                                boolean groupFound = false;
+                                groupFound = false;
                                 if (message.getTarget().isEmpty()) {
                                     writeToClient("-ERR can't join a group with no name! (example: JOIN name)");
                                 } else {
@@ -371,10 +402,10 @@ public class Server {
                                                     }
                                                     writeToClient("+OK");
                                                 } else {
-                                                    writeToClient("-ERR you are banned in the group '" + message.getTarget() + "'!");
+                                                    writeToClient("-ERR you are banned in the group (" + message.getTarget() + ")!");
                                                 }
                                             } else {
-                                                writeToClient("-ERR you are not a member of the group '" + message.getTarget() + "'!");
+                                                writeToClient("-ERR you are not a member of the group (" + message.getTarget() + ")!");
                                             }
                                         }
                                     }
@@ -384,6 +415,7 @@ public class Server {
                                 }
                                 break;
                             case KICK:
+                                ClientThread toRemove = null;
                                 groupFound = false;
                                 userFound = false;
                                 if (message.getTarget().isEmpty()) {
@@ -398,7 +430,7 @@ public class Server {
                                                 if (user.getUsername().equals(message.getPayload())) {
                                                     userFound = true;
                                                     if (group.isAdmin(this)) {
-                                                        group.removeMember(user);
+                                                        toRemove = user;
                                                         writeToClient("+OK User was kicked");
                                                         user.writeToClient("INFO You are kicked from " + message.getTarget());
                                                     } else {
@@ -406,13 +438,14 @@ public class Server {
                                                     }
                                                 }
                                             }
+                                            group.removeMember(toRemove);
                                         }
                                     }
                                     if (!groupFound) {
-                                        writeToClient("-ERR group not found!");
+                                        this.writeToClient("-ERR group not found!");
                                     }
                                     if (!userFound) {
-                                        writeToClient("-ERR user not found!");
+                                        this.writeToClient("-ERR user not found!");
                                     }
                                 }
                                 break;
@@ -420,9 +453,9 @@ public class Server {
                                 groupFound = false;
                                 userFound = false;
                                 if (message.getTarget().isEmpty()) {
-                                    writeToClient("-ERR no group name edit! (example: BAN groupName memberName)");
+                                    writeToClient("-ERR empty group name is not allowed! (example: BAN groupName memberName)");
                                 } else if (message.getPayload().isEmpty()) {
-                                    writeToClient("-ERR empty member name is not aloud! (example: BAN groupName memberName)");
+                                    writeToClient("-ERR empty member name is not allowed! (example: BAN groupName memberName)");
                                 } else {
                                     for (Group group : groups) {
                                         if (group.getName().equals(message.getTarget())) {
@@ -432,7 +465,7 @@ public class Server {
                                                     userFound = true;
                                                     if (group.isAdmin(this)) {
                                                         group.banMember(user);
-                                                        writeToClient("+OK user was banned");
+                                                        this.writeToClient("+OK user was banned");
                                                         user.writeToClient("INFO You are banned in " + message.getTarget());
                                                     } else {
                                                         writeToClient("-ERR You are not the admin of this group");
@@ -449,13 +482,48 @@ public class Server {
                                     }
                                 }
                                 break;
+                            case UNBAN:
+                                groupFound = false;
+                                userFound = false;
+                                ClientThread toUnban = null;
+                                if (message.getTarget().isEmpty()) {
+                                    writeToClient("-ERR empty group name is not allowed! (example: BAN groupName userName)");
+                                } else if (message.getPayload().isEmpty()) {
+                                    writeToClient("-ERR empty user name is not allowed! (example: BAN groupName userName)");
+                                } else {
+                                    for (Group group : groups) {
+                                        if (group.getName().equals(message.getTarget())) {
+                                            groupFound = true;
+                                            for (ClientThread user : group.getBanned()) {
+                                                if (user.getUsername().equals(message.getPayload())) {
+                                                    userFound = true;
+                                                    if (group.isAdmin(this)) {
+                                                        toUnban = user;
+                                                        this.writeToClient("+OK user was unbanned");
+                                                        user.writeToClient("INFO You are unbanned in " + message.getTarget());
+                                                    } else {
+                                                        writeToClient("-ERR You are not the admin of this group");
+                                                    }
+                                                }
+                                            }
+                                            group.unbanMember(toUnban);
+                                        }
+                                    }
+                                    if (!groupFound) {
+                                        writeToClient("-ERR group not found!");
+                                    }
+                                    if (!userFound) {
+                                        writeToClient("-ERR user not found!");
+                                    }
+                                }
+                                break;
                             case HELP:
                                 this.writeToClient(helpMessage());
                                 break;
                             case FILE:
                                 for (ClientThread ct : threads) {
                                     if (ct.getUsername().equals(message.getTarget()) && ct != this) {
-                                        ct.writeToClient("FILE " + message.getPayload() + " [" + getUsername() + "]: run a command:\nACCEPT " + getUsername() + "\nREJECT " + getUsername());
+                                        ct.writeToClient("FILE " + message.getPayload() + " [" + getUsername() + "]: run a command:\nACCEPT " + getUsername() + " / REJECT " + getUsername());
                                         this.writeToClient("OPEN_CONNECTION");
                                         this.writeToClient("Waiting to be accepted...");
                                         //create a thread and wait until user will try to connect it's file socket
@@ -503,7 +571,8 @@ public class Server {
                                     if (ct.getUsername().equals(message.getTarget()) && message.getTarget() != null) {
                                         userFound = true;
                                         ct.sendStream = null;
-                                        ct.writeToClient("-ERR User " + getUsername() + " has rejected your file!");
+                                        ct.writeToClient("INFO User " + getUsername() + " has rejected your file!");
+                                        this.writeToClient("+OK You rejected a file from [" + ct.getUsername() + "]");
                                     }
                                 }
                                 if (!userFound) {
@@ -511,6 +580,16 @@ public class Server {
                                 }
                                 break;
                             case QUIT:
+
+                                for (Group group : groups) {
+                                    if (group.getAdmin().equals(this)) {
+                                        for (ClientThread member : group.getMembersExcept(this)) {
+                                            member.writeToClient("INFO group " + group.getName() + " does NOT exist anymore! Admin [" + this.getUsername() + "] has left the chat!");
+                                        }
+                                        groups.remove(group);
+                                    }
+                                }
+
                                 // Close connection
                                 state = FINISHED;
                                 writeToClient("+OK Goodbye");
@@ -625,17 +704,22 @@ public class Server {
         }
 
         public String helpMessage() {
-            return "UL, (Example UL) used to get all users in server!\n" +
+            return
+                    "UL, (Example UL) used to get all users in server!\n" +
                     "GL,(Example GL) used to get all groups in server!\n" +
                     "GLU,(Example GLU name) used to get all group that the user is in!\n" +
+                    "GU,(Example GU groupName) used to get all members of the specific group!\n" +
                     "PM,(Example PM name message) used to get send a private message!\n" +
                     "BCST,(Example BCST message) used to send all users in server a message!\n" +
+                    "FILE,(Example FILE name fileName) used to send a file to the specific user!\n" +
                     "CG,(Example CG name) used to create a group!\n" +
+                    "GM,(Example GM groupName message) used to message all users in the group!\n" +
+                    "ADMIN,(Example ADMIN groupName) used to get the admin of the specific group!\n" +
                     "JOIN,(Example JOIN groupName) used to join a group!\n" +
                     "LEAVE,(Example LEAVE groupName) used to leave a group!\n" +
-                    "GROUP,(Example GROUP groupName message) used to message all users int he group!\n" +
                     "KICK,(Example KICK groupName name) used to kick a user out of a group!\n" +
                     "BAN,(Example BAN groupName name) used to ban a user from a group!\n" +
+                    "UNBAN,(Example UNBAN groupName name) used to unban a user in a group!\n" +
                     "HELP,(Example HELP) used to get info for the key words!\n" +
                     "QUIT, (Example QUIT) used to leave the server";
         }

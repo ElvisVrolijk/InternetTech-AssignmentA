@@ -12,15 +12,13 @@ import java.util.List;
  */
 public class Group {
     private String name;
-
     private ClientThread admin;
-
     private List<ClientThread> members;
     private List<ClientThread> banned;
 
 
     ///////////////////////////////////////////////////////////////////////////
-    // Constructors
+    // Constructor
     ///////////////////////////////////////////////////////////////////////////
 
     public Group(String name, ClientThread admin) {
@@ -55,7 +53,6 @@ public class Group {
     }
 
     public void banMember(ClientThread user) {
-        removeMember(user);
         banned.add(user);
     }
 
